@@ -1,0 +1,28 @@
+# =================================================
+# Configuration file for the ML model parameters
+# =================================================
+# Author: Patrik Benacek
+
+# Forecast leadtime
+24h:
+    # Model definition
+    ngboost:
+        model:
+            n_estimators: 300
+            minibatch_frac: 0.5
+            learning_rate: 0.05
+        learner:
+            criterion: "friedman_mse"
+            max_depth: 4
+    qrf:
+        model:
+            n_estimators: 500
+            max_features: 25
+            min_samples_leaf: 2
+            bootstrap: False
+    xtr:
+        model:
+            n_estimators: 500
+            max_features: 50
+            min_samples_leaf: 2
+            bootstrap: False

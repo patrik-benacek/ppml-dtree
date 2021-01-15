@@ -1,0 +1,61 @@
+------------------------------
+Stahovani SYNOP dat z OGIMET
+------------------------------
+Data:
+https://www.ogimet.com/synopsc.phtml.en 
+
+Data description:
+https://rdrr.io/cran/climate/man/meteo_ogimet.html
+
+Stahovani:
+* pouziti R package climate: 
+https://cran.r-project.org/web/packages/climate/vignettes/getstarted.html
+
+* Skript:
+./get_observation.R
+
+Ulozena jsou hodinova data pro profesionalni CZ stanice (38) viz. map_cz_stations.png
+Data ukladam pro jednotlive roky 2015-2019
+
+=======================
+OGIMET DATA DESCRIPTION
+=======================
+    station_ID 		- WMO station identifier
+    Lon 			- longitude
+    Lat 			- latitude
+    Date 			- date (and time) of observations
+    TC 				- air temperature at 2 metres above ground level. Values given in Celsius degrees
+    TdC 			- dew point temperature at 2 metres above ground level. Values given in Celsius degrees
+    TmaxC 			- maximum air temperature at 2 metres above ground level. Values given in Celsius degrees
+    TminC 			- minimum air temperature at 2 metres above ground level. Values given in Celsius degrees
+    ddd 			- wind direction
+    ffkmh 			- wind speed in km/h
+    Gustkmh 		- wind gust in km/h
+    P0hpa 			- air pressure at elevation of the station in hPa
+    PseahPa 		- sea level pressure in hPa
+    PTnd 			- pressure tendency in hPa
+    Nt 				- total cloud cover
+    Nh 				- cloud cover by high-level cloud fraction
+    HKm 			- height of cloud base
+    InsoD1 			- insolation in hours
+    Viskm 			- visibility in kilometres
+    Snowcm 			- depth of snow cover in centimetres
+    pr6 			- precicipitation totals in 6 hours
+    pr12 			- precicipitation totals in 12 hours
+    pr24 			- precicipitation totals in 24 hours
+    TemperatureCAvg - average air temperature at 2 metres above ground level. Values given in Celsius degrees
+    TemperatureCMax - maximum air temperature at 2 metres above ground level. Values given in Celsius degrees
+    TemperatureCMin - minimum air temperature at 2 metres above ground level. Values given in Celsius degrees
+    TdAvgC 			- average dew point temperature at 2 metres above ground level. Values given in Celsius degrees
+    HrAvg 			- average relative humidity. Values given in %
+    WindkmhDir 		- wind direction
+    WindkmhInt 		- wind speed in km/h
+    WindkmhGust 	- wind gust in km/h
+    PresslevHp 		- Sea level pressure in hPa
+    Precmm 			- precipitation totals in mm
+    TotClOct 		- total cloudiness in octants
+    lowClOct 		- cloudiness by low level clouds in octants
+    SunD1h 			- sunshine duration in hours
+    PreselevHp 		- atmospheric pressure measured at altitude of station in hPa
+    SnowDepcm 		- depth of snow cover in centimetres
+

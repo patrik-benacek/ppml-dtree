@@ -1,0 +1,12 @@
+------------------
+Data preparation
+------------------
+
+1. Surface data deaccumulation
+run_data_deaccum.sh
+
+2. Grid-to-Obs data interpolation 
+run_data_interp.sh
+
+3. Merge interpolated data to dataset
+run_data_merge.sh

@@ -1,0 +1,22 @@
+name: nwp_pp
+channels:
+  - defaults
+dependencies:
+  - ecmwfapi
+  - notebook
+  - pandas
+  - setuptools
+  - scipy
+  - scikit-learn
+  - cython
+  - matplotlib
+  - properscoring
+  - seaborn
+  - optuna
+  - shap
+  - statsmodels
+  - xgboost
+  - lightgbm
+  - catboost
+  - python-graphviz
+prefix: /home/patrik/miniconda3/envs/nwp_pp

@@ -1,0 +1,8 @@
+.vscode
+data_preproc/data
+forecasts/data
+observations/data
+methods/benchmark/results
+methods/tree_based/results
+evaluation/plots
+evaluation/results
