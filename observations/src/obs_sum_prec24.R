@@ -1,17 +1,19 @@
 #!/usr/bin/env Rscript
 #---------------------------------------------------
-# Prepare sum of 24hour precipitation valid at 00utc
-#---------------------------------------------------
-# This is necessary for postprocessing of the 24hour precipitation foreast
+# Prepare sum of 24-hour precipitation valid at 00utc
 # Author: Patrik Benacek
-
+#---------------------------------------------------
 rm(list=ls()) 
+
 library(tidyverse)
 library(lubridate)
 library(data.table)
 
-inpath <- "/home/patrik/Work/czechglobe/TIGGE/observations/data/"
-years <- c(2015:2019)
+# Input arguments
+args = commandArgs(trailingOnly=TRUE)
+
+# Specify obs period
+year = argv[1]
 
 preproc_precip <- function(df){
   #
@@ -42,16 +44,14 @@ preproc_precip <- function(df){
 }
 
 # Start script
-for (year in years){
-  files = list.files(path=file.path(inpath, as.character(year)), pattern='^obs_stat_')
-  for (file in files){
-    print(paste("Prepare data for", file))
-    # Read ogimet data
-    data = readRDS(file.path(inpath, year, file))
-    out = preproc_precip(data)
-    # Save prec24h observations
-    saveRDS(out, file = file.path(inpath, year, paste0('prec24_', file)))
-  }
+files = list.files(path=file.path("data", year), pattern='^obs_stat_')
+for (file in files){
+  print(paste("Prepare data for", file))
+  # Read ogimet data
+  data = readRDS(file.path("data", year, file))
+  out = preproc_precip(data)
+  # Save prec24h observations
+  saveRDS(out, file = file.path("data", year, paste0('prec24_', file)))
 }
 
 print("Finish.")

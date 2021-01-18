@@ -28,7 +28,7 @@ suppressMessages(library(readr))
 print("Read observations ...")
 
 # Read station metadata
-st_meta <- read_csv(file.path(data_dir, 'observations/data', 'stations_cz.csv'))
+st_meta <- read_csv(file.path(data_dir, 'observations/data', 'metadata_stations.csv'))
 #str(st_meta)
 
 #----------------------------------------------------------------

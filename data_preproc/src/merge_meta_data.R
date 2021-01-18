@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------
 # Add model and station metadata to the merged dataset
 # Inputs:
-#   * station-meta: observations/data/stations_cz.csv
+#   * station-meta: observations/data/metadata_stations.csv
 #   * model-meta:   data/interp/data_aux_geo_interp.nc      
 #   * interp-data:  data/interp/$leadtime/data_$target_$leadtime.csv
 # Output:
@@ -24,7 +24,7 @@ leadtime = paste0("ff",args[1],"h")
 target   = args[2] 
 
 # Read station metadata
-metadata_id <- read.csv(file.path(input_obs_dir, "stations_cz.csv"))
+metadata_id <- read.csv(file.path(input_obs_dir, "metadata_stations.csv"))
 
 library(ncdf4)
 # Read model orography metadata
