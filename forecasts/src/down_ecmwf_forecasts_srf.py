@@ -48,12 +48,15 @@ from ecmwfapi import ECMWFDataServer
 from calendar import monthrange
 import os
 from pathlib import Path
+import sys
+from config import PERIOD_DOWN
+
+# Input argument: outdir
+data_dir = sys.argv[1]
+# Period
+years  = PERIOD_DOWN['srf']
 
 server = ECMWFDataServer()
-
-data_dir = "/home/benacek.p/TIGGE/forecasts/"
-years  = [2015, 2016, 2017, 2018, 2019]
-
 def retrieve_tigge_data():
     # Settings
     # Make savepath directory
