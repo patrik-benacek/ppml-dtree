@@ -3,10 +3,16 @@
 
 LEADTIMES="24 240"
 TARGETS="t2m prec24"
+PREC_DEACCUM=true
 
 # Interpolation target variables
 for LEADTIME in $LEADTIMES; do
     for TARGET in $TARGETS; do
+        # Run deaccumulation of precipitation
+        if [[ $PREC_DEACCUM = true && "$LEADTIME" = "240" && "$TARGET" = "prec24" ]]; then
+            echo "Deaccumulate $TARGET for $LEADTIMES"
+            ./run_data_deaccum.sh
+        fi
         # Target variables
         src/interpolation_target_${TARGET}.R $LEADTIME
     done

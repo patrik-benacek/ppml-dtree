@@ -1,33 +1,47 @@
 #!/usr/bin/env Rscript
 
 #-----------------------------------------------------------------------
-# Extract model orography in station location and save as CSV file
+# Add model and station metadata to the merged dataset
+# Inputs:
+#   * station-meta: observations/data/stations_cz.csv
+#   * model-meta:   data/interp/data_aux_geo_interp.nc      
+#   * interp-data:  data/interp/$leadtime/data_$target_$leadtime.csv
+# Output:
+#   * dataset:
 #-----------------------------------------------------------------------
 
 rm(list=ls())
 
-data_dir <- "/home/patrik/Work/czechglobe/TIGGE/data_preproc/generate_dataset/"
-input_data_dir <- "/home/patrik/Work/czechglobe/TIGGE/data_preproc/interpolation/data"
-metadata_id <- read.csv(file.path(data_dir, "data", "metadata_station.csv"))
+# Input arguments
+args = commandArgs(trailingOnly=TRUE)
 
-leadtime="ff240h"
-target='t2m'  # t2m/prec24
+# Data location
+input_data_dir <- "data/interp"
+input_obs_dir <- "../observations/data"
+out_data_dir <- "data/merged"
+
+leadtime = paste0("ff",args[1],"h")
+target   = args[2] 
+
+# Read station metadata
+metadata_id <- read.csv(file.path(input_obs_dir, "stations_cz.csv"))
 
 library(ncdf4)
-nc <- nc_open(file.path(input_data_dir, leadtime, "data_aux_geo_interp.nc"))
+# Read model orography metadata
+nc <- nc_open(file.path(input_data_dir, "data_aux_geo_interp.nc"))
 metadata <- list()
 metadata$station_id <- ncvar_get(nc, "station_id")
 metadata$orog <- round(ncvar_get(nc, "orog"), 0)
 nc_close(nc)
-
 metadata <- as.data.frame(metadata)
 
 # merge station and model metadata
 metadata_id <- merge(metadata_id, metadata, by.x = "wmo_id", by.y = "station_id")
 
-write.csv(metadata_id, file = file.path(data_dir, "data", "metadata_all.csv"), row.names = FALSE)
+# Output station+model metadata file
+#write.csv(metadata_id, file = file.path(data_dir, "data", "metadata_all.csv"), row.names = FALSE)
 
-data <- read.csv(file.path(data_dir, "data", paste0("data_", target,"_", leadtime, "_2015_2019.csv")))
+data <- read.csv(file.path(out_data_dir, leadtime, paste0("data_", target,"_", leadtime, ".csv")))
 data$date = as.Date(data$date)
 
 metadata_names <- c("date", "station", "station_names", "lon", "lat", "alt", "orog")
@@ -40,4 +54,4 @@ data <- merge(data, metadata_id, by.x = "station", by.y = "wmo_id")[,c(metadata_
 data <- data[order(data$date),]
 
 # Write data
-write.csv(data, file = file.path(data_dir, "data", paste0("data_wmeta_", target,"_", leadtime, "_2015_2019.csv")), row.names = FALSE)
+write.csv(data, file = file.path(out_data_dir, leadtime, paste0("data_wmeta_", target,"_", leadtime, ".csv")), row.names = FALSE)

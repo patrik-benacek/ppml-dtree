@@ -1,19 +1,23 @@
 #!/usr/bin/env Rscript
 
-#---------------------------------------------------------
-## Prepare data set as Rdata file for easier loading
-# Target: 
-#  - t2m    : 
-#  - prec24 : square-root transformation on output data!!!
-#---------------------------------------------------------
+## Prepare CSV dataset from interpolated data
+# Usage: 
+# ./merge_interp_data.R $leadtime[24/240] $target[t2m/prec24]
+# 
+# Info:
+#   * prec24: square-root transformation is applied
+
 rm(list=ls())
 
-## load data
-data_dir <- "/home/patrik/Work/czechglobe/TIGGE/data_preproc/generate_dataset/"
-input_data_dir <- "/home/patrik/Work/czechglobe/TIGGE/data_preproc/interpolation/data"
+# Input arguments
+args = commandArgs(trailingOnly=TRUE)
 
-leadtime = "ff240h"
-target   = "t2m" # t2m/prec24
+## load data
+input_data_dir <- "data/interp"
+out_data_dir <- "data/merged"
+
+leadtime = paste0("ff",args[1],"h")
+target   = args[2] 
 
 surface_attr = c('cape', 'sp', 'sshf', 'slhf', 'msl', 'u10', 'v10', 'd2m', 'ssr', 'str', 'skt', 'sm', 'tcc', 't2m', 'tp')
 plev_attr = c('t', 'u', 'v', 'q', 'gh')
@@ -22,7 +26,6 @@ plev_attr = c('t', 'u', 'v', 'q', 'gh')
 target_att <- ifelse(target=='prec24', 'tp', target)
 surface_attr <- surface_attr[!surface_attr==target_att]
 
-#-----------------------------
 library(ncdf4)
 
 print("Read target data ...")
@@ -213,5 +216,5 @@ for (i in seq_along(plev_attr)){
 #print("Save results as RDS ...")
 #save(data, file = file.path(data_dir, "data", "data_all.Rdata"))
 print("Save results as CSV ...")
-write.csv(data, file = file.path(data_dir, "data", paste0("data_", target,"_", leadtime,"_2015_2019.csv")), row.names = FALSE)
+write.csv(data, file = file.path(out_data_dir, paste0("data_", target,"_", leadtime,".csv")), row.names = FALSE)
 
