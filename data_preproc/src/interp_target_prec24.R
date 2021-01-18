@@ -4,14 +4,20 @@
 ## Bilinear interpolation of ensemble forecasts to station locations
 ##------------------------------------------------------------------
 rm(list=ls())
-data_dir <- "/home/patrik/Work/czechglobe/TIGGE/"
+data_dir <- "../"
+
+# Input arguments
+args = commandArgs(trailingOnly=TRUE)
+
+# Forecast lead times and position in nc files
+fc_time = as.integer(args[1])
 
 years = c(2015,2019)
 years_regex = "201[5,6,7,8,9]"
 
-# Forecast lead times and position in nc files
-fc_time = 240    # leadtime
-fc_time_pos = 3  # time position in NetCDF
+# time position in NetCDF 1/3
+if (fc_time==24) fc_time_pos = 1
+if (fc_time==240) fc_time_pos = 3
 
 print("Read data")
 suppressMessages(library(lubridate))
@@ -230,7 +236,7 @@ location_def <- ncvar_def("station_loc", "", list(dimnchar,stationdim),
                           prec = "char", longname = "location of station")
 
 ## create nc file
-ncfile_name <- file.path(data_dir, "data_preproc", "interpolation", "data", paste0("ff", fc_time, "h"), paste0("data_target_prec24_interp.nc"))
+ncfile_name <- file.path("data/interp", paste0("ff", fc_time, "h"), paste0("data_target_prec24_interp.nc"))
 ncout <- nc_create(ncfile_name,
                    list(prec24_fc_def, prec24_obs_def, alt_def, lat_def, lon_def, id_def, location_def),
                    force_v4=T)

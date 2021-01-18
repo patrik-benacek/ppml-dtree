@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DATADIR=/home/patrik/Work/czechglobe/TIGGE/forecasts/data
+DATADIR="../forecasts/data"
 
 # Run deaccumulation script
 for YYYY in `seq 2015 2019`; do
@@ -10,7 +10,7 @@ for YYYY in `seq 2015 2019`; do
         date=`echo ${file} | cut -c 11-18`
         # run deaccumulation
         echo "Deaccumulation file ${file} in ${date}"
-        ./field_deaccumulation.R ${DATADIR}/${YYYY}/${file} $DATADIR/${YYYY}/ecmwf_tp_${date}.nc 240 24 $DATADIR/${YYYY}/ecmwf_srf_deacc_${date}.nc
+        src/daccum_data.R ${DATADIR}/${YYYY}/${file} $DATADIR/${YYYY}/ecmwf_tp_${date}.nc 240 24 $DATADIR/${YYYY}/ecmwf_srf_deacc_${date}.nc
     done
 done
 

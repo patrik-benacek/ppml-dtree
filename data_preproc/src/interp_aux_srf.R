@@ -4,15 +4,20 @@
 ## Bilinear interpolation of ensemble forecasts to station locations
 ##------------------------------------------------------------------
 rm(list=ls())
-data_dir <- "/home/patrik/Work/czechglobe/TIGGE/"
+data_dir <- "../"
+
+# Input arguments
+args = commandArgs(trailingOnly=TRUE)
+
+# Forecast lead times and position in nc files
+fc_time = as.integer(args[1])
 
 years = c(2015,2019)
 years_regex = "201[5,6,7,8,9]"
 
-# Forecast lead times and position in nc files
-fc_time = 240      # leadtime
-fc_time_pos = 3    # time position in NetCDF
-target = 'prec24'     # prec24/t2m
+# time position in NetCDF 1/3
+if (fc_time==24) fc_time_pos = 1
+if (fc_time==240) fc_time_pos = 3
 
 # Load packages
 suppressMessages(library(readr))
@@ -38,9 +43,9 @@ if (fc_time > 24){
     suffix = "srf_deacc"
 }
 
-target_att <- ifelse(target=='prec24', 'tp', target )
+#target_att <- ifelse(target=='prec24', 'tp', target )
 attributes = c('cape', 'sp', 'sshf', 'slhf', 'msl', 'u10', 'v10', 'd2m', 'ssr', 'str', 'skt', 'sm', 'tcc', 't2m', 'tp')
-attributes <- attributes[!attributes==target_att]
+#attributes <- attributes[!attributes==target_att]
 
 # Use deaccumulated data if neccessary
 fc_files <- Sys.glob(file.path(data_dir, "forecasts/data", years_regex, paste0("ecmwf_", suffix, "_", years_regex, "*.nc")))
@@ -174,7 +179,7 @@ timedim <- ncdim_def(name = "time", vals = as.integer(fc_raw_validtime),
                      longname = "valid time of forecasts and observations, UTC")
 # as.POSIXct(as.integer(fc_raw_validtime), tz = "UTC", origin = "1970-01-01 00:00")
 
-source(file.path(data_dir, "data_preproc/interpolation", "config_aux.R"))
+source("config_aux.R")
 
 # define variables
 fillvalue <- NA
@@ -227,7 +232,7 @@ location_def <- ncvar_def("station_loc", "", list(dimnchar,stationdim),
 meta_def <- list(alt_def, lat_def, lon_def, id_def, location_def)
 
 ## create nc file
-ncfile_name <- file.path(data_dir, "data_preproc", "interpolation", "data", paste0("ff", fc_time, "h"), paste0("data_aux_srf_", target,"_interp.nc"))
+ncfile_name <- file.path("data/interp", paste0("ff", fc_time, "h"), paste0("data_aux_srf_interp.nc"))
 ncout <- nc_create(ncfile_name, 
                    c(fc_def, meta_def), 
                    force_v4=T)

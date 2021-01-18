@@ -4,21 +4,26 @@
 ## Bilinear interpolation of ensemble forecasts to station locations
 ##------------------------------------------------------------------
 rm(list=ls())
-data_dir <- "/home/patrik/Work/czechglobe/TIGGE/"
+data_dir <- "../"
+
+# Input arguments
+args = commandArgs(trailingOnly=TRUE)
+
+# Forecast lead times and position in nc files
+fc_time = as.integer(args[1])
+pressure_level = as.integer(args[2])
 
 years = c(2015,2019)
 years_regex = "201[5,6,7,8,9]"
 
-# Forecast lead times and position in nc files
-fc_time = 24     # leadtime 24/240
-fc_time_pos = 1  # time position in NetCDF 1/3
+# time position in NetCDF 1/3
+if (fc_time==24) fc_time_pos = 1
+if (fc_time==240) fc_time_pos = 3
+
+# Define attributes
+attributes = c('t', 'u', 'v', 'q', 'gh')
 
 print("Read data")
-
-attributes = c('t', 'u', 'v', 'q', 'gh')
-pressure_level = 850
-target = 'prec24'
-
 #-------------------------
 # Read observations 
 #-------------------------
@@ -188,7 +193,7 @@ timedim <- ncdim_def(name = "time", vals = as.integer(fc_raw_validtime),
                      longname = "valid time of forecasts and observations, UTC")
 # as.POSIXct(as.integer(fc_raw_validtime), tz = "UTC", origin = "1970-01-01 00:00")
 
-source(file.path(data_dir, "data_preproc/interpolation", "config_aux.R"))
+source("config_aux.R")
 
 # define variables
 fillvalue <- NA
@@ -241,7 +246,7 @@ location_def <- ncvar_def("station_loc", "", list(dimnchar,stationdim),
 meta_def <- list(alt_def, lat_def, lon_def, id_def, location_def)
 
 ## create nc file
-ncfile_name <- file.path(data_dir, "data_preproc", "interpolation", "data", paste0("ff", fc_time, "h"), paste0("data_aux_pl", pressure_level,"_", target,"_interp.nc"))
+ncfile_name <- file.path("data/interp", paste0("ff", fc_time, "h"), paste0("data_aux_pl", pressure_level,"_interp.nc"))
 ncout <- nc_create(ncfile_name, 
                    c(fc_def, meta_def), 
                    force_v4=T)
