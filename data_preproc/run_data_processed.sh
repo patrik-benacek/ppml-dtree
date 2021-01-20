@@ -17,5 +17,9 @@ for LEADTIME in $LEADTIMES; do
 
         # Overwrite the dataset with the enhanced one
         mv data/processed/data_wmeta_${TARGET}_${LEADTIME}.csv data/processed/data_${TARGET}_${LEADTIME}.csv
+
+        # Zip processed files and clean
+        zip data/processed/data_wmeta_${TARGET}_${LEADTIME} data/processed/data_${TARGET}_${LEADTIME}.csv
+        rm -f data/processed/data_${TARGET}_${LEADTIME}.csv
     done
 done
