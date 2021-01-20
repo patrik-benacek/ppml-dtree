@@ -16,6 +16,6 @@ for LEADTIME in $LEADTIMES; do
         src/merge_meta_data.R $LEADTIME $TARGET
 
         # Overwrite the dataset with the enhanced one
-        mv data/merged/data_wmeta_${TARGET}_${LEADTIME}.csv data/merged/data_${TARGET}_${LEADTIME}.csv
+        mv data/processed/data_wmeta_${TARGET}_${LEADTIME}.csv data/processed/data_${TARGET}_${LEADTIME}.csv
     done
 done

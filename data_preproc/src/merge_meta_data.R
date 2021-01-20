@@ -18,7 +18,7 @@ args = commandArgs(trailingOnly=TRUE)
 # Data location
 input_data_dir <- "data/interp"
 input_obs_dir <- "../observations/data"
-out_data_dir <- "data/merged"
+out_data_dir <- "data/processed"
 
 leadtime = paste0("ff",args[1],"h")
 target   = args[2] 

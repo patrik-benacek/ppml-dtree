@@ -14,7 +14,7 @@ args = commandArgs(trailingOnly=TRUE)
 
 ## load data
 input_data_dir <- "data/interp"
-out_data_dir <- "data/merged"
+out_data_dir <- "data/processed"
 
 leadtime = paste0("ff",args[1],"h")
 target   = args[2] 
