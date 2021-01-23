@@ -236,7 +236,7 @@ def tune_model():
     print("Save model to: {}".format(file_model))
     joblib.dump(model, file_model)
 
-def train_model(print_params=True):
+def train_model():
     # Read dataset
     data, expname = read_dataset()
     # Get training data
@@ -244,13 +244,14 @@ def train_model(print_params=True):
     # Build model
     model = build_model()
     model.set_params(**PARAMS)
-
-    if print_params:
-        print(model.get_params())
-
-    model.fit(X_train, y_train)
+    # Fit model
+    X_train_ = model[:-1].fit_transform(X_train)
+    y_train_ = y_train.to_numpy()
+    model[-1].fit(X_train_, y_train_)
     # Save model
-    joblib.dump(model, os.path.join(MODEL_DIR, f"model_{expname}.joblib"))
+    file_model = os.path.join(MODEL_DIR, f"model_{expname}.joblib")
+    print("Save model to: {}".format(file_model))
+    joblib.dump(model, file_model)
 
 def test_model():
     # Read dataset
