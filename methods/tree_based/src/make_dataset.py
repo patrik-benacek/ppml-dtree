@@ -1,9 +1,10 @@
-import pandas as pd                                                                                                                                                                          
-import numpy as np                                                                                                                                                                           
+import pandas as pd
+import numpy as np
 import time
-import os                                                                                                                                                                                    
+import os
 import sys
 
+sys.path.append('config')
 from config import (TARGET, LEADTIME, STATION, DATA_DIR)
                     
 def load_dataset(file):
@@ -43,10 +44,10 @@ def read_dataset():
     print(f"Run model for {STATION} station.")
     print(30*"-")
     if STATION=='all':
-        return data.drop(columns='station_names'), expname
+        return data, expname
     else:
         try:
-            return data[data.station_names==STATION].drop(columns='station_names'), expname
+            return data[data.station_names==STATION], expname
         except OSError:
             print("Station {} not exist. Available stations: \n{}".format(STATION, data.station_names.unique()))
             sys.exit()

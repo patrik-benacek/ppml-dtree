@@ -16,12 +16,11 @@ from ngboost.scores import CRPScore
 from ngboost.distns import Normal
 import properscoring as ps
 
+sys.path.append('config')
 from core_trees import QuantileRandomForestRegressor, QuantileExtraTreesRegressor
 from transformers import GetOrographyError
 from make_dataset import read_dataset
- 
-sys.path.append('../config/')
-from config import (TRAIN_PERIOD, TEST_PERIOD, 
+from config import (TRAIN_PERIOD, TEST_PERIOD, TARGET,
                     MODEL, MODEL_DIR, PARAMS, GRID_PARAMS,
                     N_QUANTILES_PREDICT, GRIDSEARCH_CV, 
                     NUM_CORES__MODEL, NUM_CORES__GRID_SEARCH)
@@ -30,7 +29,7 @@ def split_train_test(df):
     """Split dataset to train/test based on the predefined $train_period period."""
 
     # Get target and features
-    x = df.drop(columns=['obs'])
+    x = df.drop(columns=['obs','station_names'])
     y = df['obs']
 
     # Split dataset
@@ -42,13 +41,17 @@ def split_train_test(df):
     print("Train: {}-{}".format(x_train.index.min().year, x_train.index.max().year))
     print("Test:  {}-{}".format(x_test.index.min().year, x_test.index.max().year))
     print()
-    return x_train, y_train, x_test, y_test
+    return x_train, y_train, x_test, y_test 
 
 def build_model():
     """Building model""" 
+
+    # Test input model
+    if MODEL not in ['ngb', 'qrf', 'xtr']:
+        sys.exit(f'Model {MODEL} is not supported. Check config file.')
+
     # Data preprocessor
     preprocessor = ColumnTransformer([('orog', GetOrographyError(), ["alt", "orog"])], remainder='passthrough')
-
     # Model estimator
     if MODEL=="qrf":
         get_model = QuantileRandomForestRegressor(
@@ -177,7 +180,7 @@ def tune_model():
     y_train_ = y_train.to_numpy()
     model['model'].fit(X_train_, y_train_)
     # Save model
-    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}.joblib")
+    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}_{TRAIN_PERIOD[0]}.joblib")
     print("Save model to: {}".format(file_model))
     joblib.dump(model, file_model)
 
@@ -194,7 +197,7 @@ def train_model():
     y_train_ = y_train.to_numpy()
     model["model"].fit(X_train_, y_train_)
     # Save model
-    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}.joblib")
+    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}_{TRAIN_PERIOD[0]}.joblib")
     print("Save model to: {}".format(file_model))
     joblib.dump(model, file_model)
 
@@ -204,17 +207,46 @@ def test_model():
     # Get testing data
     _, _, X_test, y_test = split_train_test(data)
     # Get trained model
-    model = joblib.load(os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}.joblib"))
+    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}_{TRAIN_PERIOD[0]}.joblib")
+    print("Load trained model: {}".format(file_model))
+    model = joblib.load(file_model)
+
     # Make prediction
     X_test_  = model[:-1].fit_transform(X_test)
     if MODEL == 'ngb':
         # Get normal-distribution parameters prediction 
         y_dist = model['model'].pred_dist(X_test_) 
-        print("CRPS on the test set: {:.2f}".format(
-            crps_gaussian_score(y_test, loc=y_dist.params['loc'], scale=y_dist.params['scale'])))
+        results = pd.DataFrame({
+            'station': data.loc[X_test.index.unique(), 'station_names'].values,
+            #'obs': y_test.values,
+            'loc': y_dist.params['loc'], 
+            'scale': y_dist.params['scale']
+            }, index=X_test.index)
+        # Evaluate prediction
+        crps_score_model = crps_gaussian_score(
+            y_test, loc=y_dist.params['loc'], scale=y_dist.params['scale'])
+
     elif MODEL in ['qrf', 'xtr']:
         # Get quantile prediction
         nq = N_QUANTILES_PREDICT + 1
-        y_pred = model['model'].predict(X_test_, np.arange(1/nq, nq/nq, 1/nq)) 
-        print("CRPS on the test set: {:.2f}".format(
-            crps_ensemble_score(y_test, y_pred)))
+        quantiles = np.arange(1/nq, nq/nq, 1/nq)
+        y_pred = model['model'].predict(X_test_, quantiles) 
+        results = pd.concat([
+            pd.DataFrame({'station': data.loc[X_test.index.unique(), 'station_names'].values}, index=X_test.index),
+            pd.DataFrame(y_pred.round(4), columns=quantiles.round(3), index=X_test.index)
+            ], axis=1)
+        # Evaluate prediction
+        crps_score_model = crps_ensemble_score(y_test, y_pred)
+
+    # Show prediction scores:
+    # baseline reference
+    crps_score_baseline = crps_gaussian_score(
+        y_test, loc=X_test[TARGET+'_mean'], scale=np.sqrt(X_test[TARGET+'_var']))
+    print("\nCRPS raw-forecast: {:.2f}".format(crps_score_baseline))
+    print("CRPS {}-model: {:.2f}".format(MODEL, crps_score_model))
+    print("Skill-Score: {:.2f}".format((crps_score_baseline - crps_score_model) / crps_score_baseline))
+
+    # Save prediction
+    file_results = os.path.join(MODEL_DIR, f"pred_{MODEL}_{expname}_{TRAIN_PERIOD[0]}.csv")
+    print("\nSave prediction to: {}".format(file_results))
+    results.reset_index().to_csv(file_results, index=False)
