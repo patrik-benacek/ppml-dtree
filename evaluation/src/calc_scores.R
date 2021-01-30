@@ -20,11 +20,8 @@ if (length(args)<2) {
 file   = args[1]
 family = args[2]
 
-#file = "/home/patrik/Work/czechglobe/TIGGE/evaluation/data/prediction/pred_QRF_t2m_ff24h_2015_2019.csv"
-#family = "sample"
-
 # Outpath
-datadir_obs <- "/home/patrik/Work/czechglobe/TIGGE/evaluation/data/"
+datadir_obs <- "/home/patrik/Work/czechglobe/TIGGE/evaluation/results/"
 outpath <- datadir_obs
 
 # Read experiment predictions

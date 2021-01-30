@@ -12,10 +12,9 @@ suppressMessages(library(ggmap))
 args = commandArgs(trailingOnly=TRUE)                                                                                                                                                        
 
 files = Sys.glob(args)
-#files = Sys.glob(file.path('/home/patrik/Work/czechglobe/TIGGE/evaluation', 'data', 'eval_scores_*_t2m_ff24h_2015_2019.Rdata'))
 
 # Paths                                                                                                                                                                                    
-outpath <- "/home/patrik/Work/czechglobe/TIGGE/evaluation/plots"
+outpath <- "/home/patrik/Work/czechglobe/TIGGE/evaluation/results/plots"
 obspath <- "/home/patrik/Work/czechglobe/TIGGE/observations/data"
 
 is_reference_exp = FALSE
@@ -61,7 +60,7 @@ if ('Raw-Fcst' %in% expnames){
 }
 
 # Read stations' metedata
-obs_meta = read.csv(file.path(obspath, 'stations_cz.csv'), 
+obs_meta = read.csv(file.path(obspath, 'metadata_stations.csv'), 
                     col.names = c('station_id', 'station_names', 'lon', 'lat', 'alt'))
 # Merge station with scorefiles
 allscores = merge(allscores, obs_meta, by = 'station_id')

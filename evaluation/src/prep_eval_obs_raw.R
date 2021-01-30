@@ -4,11 +4,11 @@ exp_name <- 'Raw-Fcst'
 target   <- 't2m'
 leadtime <- 240
 
-in_data_dir = "/home/patrik/Work/czechglobe/TIGGE/data_preproc/generate_dataset/data"
+in_data_dir = "/home/patrik/Work/czechglobe/TIGGE/data_preproc/data/interp"
 out_data_dir = "/home/patrik/Work/czechglobe/TIGGE/evaluation/results"
 
 # Read station measurements                                                                                                                                                                  
-file_obs = paste0("data_wmeta_", target, "_ff", leadtime, "h_2015_2019.csv")                                                                                                                    
+file_obs = paste0("data_", target, "_ff", leadtime, "h.zip")                                                                                                                    
 data <- read.csv(file.path(in_data_dir, file_obs))                                                                                                                                           
 data$date = as.Date(data$date)                                                                                                                                                               
   
