@@ -41,15 +41,13 @@ def find_quant(trainy, train_tree_node_ID, pred_tree_node_ID, qntl):
 
 @jit(nopython=True, parallel=True)
 def find_quant_approx(trainy, train_tree_node_ID, pred_tree_node_ID, qntl):
-    """find_quant(trainy, train_tree_node_ID, pred_tree_node_ID, qntl)
+    """find_quant_approx(trainy, train_tree_node_ID, pred_tree_node_ID, qntl)
     
     Aggregates the leaves from the random forest and calculates the quantiles.
 
-    Aggregates leaves based on the tree node indexes from both the training
-    and prediction data. Values from the training target data is then used
-    to rebuild the leaves for each prediction, which is then summarized
-    to the specified quantiles. This is the slowest step in the process,
-    so numba is used to speed up this step.
+    To speed up the quantiles calculation we use random sample of values
+    from the training target data to rebuild the leaves for each prediction.
+    This approximation speed-up the prediction in case of min_sample_leafs>100. 
 
     Parameters
     ----------
@@ -306,8 +304,13 @@ class QuantileExtraTreesRegressor:
             train_tree_node_ID[:, i] = self.forest.estimators_[i].apply(self.trainX)
             pred_tree_node_ID[:, i] = self.forest.estimators_[i].apply(X)
 
-        ypred_pcts = find_quant(self.trainy, train_tree_node_ID,
-                                pred_tree_node_ID, qntl)
+        if not use_approx:
+            ypred_pcts = find_quant(self.trainy, train_tree_node_ID,
+                                    pred_tree_node_ID, qntl)
+        else:
+            print("Use approximation for prediction ...")
+            ypred_pcts = find_quant_approx(self.trainy, train_tree_node_ID,
+                                    pred_tree_node_ID, qntl)
 
         return ypred_pcts
 
