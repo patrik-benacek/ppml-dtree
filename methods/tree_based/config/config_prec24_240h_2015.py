@@ -3,8 +3,8 @@ LEADTIME = "240h"       # 24h/240h
 MODEL    = "xxMODELxx"  # qrf/xtr/ngb/qrf_skgarden
 STATION  = "all"        # all/station_name
 
-DATA_DIR = "../../../data_preproc/data/processed/"
-MODEL_DIR = "../models/"
+DATA_DIR = "../../data_preproc/data/processed/"
+MODEL_DIR = "models/"
 
 TRAIN_PERIOD = [2015,2016,2017,2018]
 TEST_PERIOD  = [2019]
@@ -13,13 +13,12 @@ TEST_PERIOD  = [2019]
 GRIDSEARCH_CV = 3
 N_QUANTILES_PREDICT = 50
 NUM_CORES__GRID_SEARCH = 2
-NUM_CORES__MODEL = 5
+NUM_CORES__MODEL = 6
 
 # Grid-search model parameter setting (tune_model.py):
 GRID_PARAMS = {
     'ngb': {
         'model__Base__max_depth': [3, 5],
-        'model__n_estimators': [200],
         'model__minibatch_frac': [0.2],
         'model__learning_rate': [0.03]
     },

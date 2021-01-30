@@ -16,16 +16,17 @@ sed -e "s/xxMODELxx/$MODEL/g" config/config_${TARGET}_${LEADTIME}_${START_TRAIN}
 head -n4 config/config.py
 
 # Activate eccodes environment
-source /home/patrik/miniconda3/bin/activate nwp_pp
+source $HOME/miniconda3/bin/activate nwp_pp
 
 if [ $RUN_TUNE_MODEL = true ]; then
     # Hyperparameter tuning (GRID_PARAMS in config)
     echo "Tune model parameters"
-    (time python src/run.py tune) &> models/summary_tune_${TARGET}_${LEADTIME}_${START_TRAIN}.out 
+    cat config/config.py > models/summary_tune_${MODEL}_${TARGET}_${LEADTIME}_${START_TRAIN}.out
+    (time python src/run.py tune) &>> models/summary_tune_${MODEL}_${TARGET}_${LEADTIME}_${START_TRAIN}.out 
 else
     # Train model (PARAMS in config)
     echo "Train model"
-    (time python src/run.py train) &> models/summary_train_${TARGET}_${LEADTIME}_${START_TRAIN}.out
+    (time python src/run.py train) &> models/summary_train_${MODEL}_${TARGET}_${LEADTIME}_${START_TRAIN}.out
 fi
 
 # Test model (prediction)

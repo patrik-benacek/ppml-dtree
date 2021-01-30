@@ -41,7 +41,7 @@ def split_train_test(df):
     print("Train: {}-{}".format(x_train.index.min().year, x_train.index.max().year))
     print("Test:  {}-{}".format(x_test.index.min().year, x_test.index.max().year))
     print()
-    return x_train, y_train, x_test, y_test 
+    return x_train, y_train, x_test, y_test
 
 def build_model():
     """Building model""" 
@@ -89,7 +89,7 @@ def run_ngb_estimator(hpar, data):
     """Runing estimator for Natural Gradient Boosting."""
 
     # Input dataset
-    X_train, y_train, X_test, y_test = data
+    X_train, y_train, X_val, y_val = data
     # Build model
     model = build_model()
     # Input grid-search values to dicitionary 
@@ -98,35 +98,37 @@ def run_ngb_estimator(hpar, data):
     model.set_params(**dic_params)
     # estimator 
     model.fit(X_train, y_train)
-    X_test_ = model[:-1].fit_transform(X_test)
+    # early stopping not work correctly. Problem with loss_eval values (@patrik)
+    # model.fit(X_train, y_train, model__X_val=X_val.to_numpy(), model__Y_val=y_val, model__early_stopping_rounds=10)
     # Get (normal) distribution parameters prediction 
-    y_dist = model['model'].pred_dist(X_test_) 
+    X_val_ = model[:-1].fit_transform(X_val)
+    y_dist = model['model'].pred_dist(X_val_) 
     # Evaluation
-    score = crps_gaussian_score(y_test, loc=y_dist.params['loc'], scale=y_dist.params['scale'])
+    score = crps_gaussian_score(y_val, loc=y_dist.params['loc'], scale=y_dist.params['scale'])
     return score
 
 def run_tree_estimator(hpar, data):
     """Runing estimator for Quantile Random Forest and Quantile Extra Trees."""
 
     # Input dataset
-    X_train, y_train, X_test, y_test = data
+    X_train, y_train, X_val, y_val = data
     # Build model
     model = build_model()
     # Input grid-search values to dicitionary 
     dic_params = {param:value for param, value in zip(GRID_PARAMS[MODEL].keys(), hpar)}
     # Set model parameters
     model.set_params(**dic_params)
-    # Prepare train/test datasets
+    # Prepare train/validation datasets
     X_train_ = model[:-1].fit_transform(X_train)
-    X_test_  = model[:-1].fit_transform(X_test)
+    X_val_  = model[:-1].fit_transform(X_val)
     y_train_ = y_train.to_numpy()
     # Fit model
     model['model'].fit(X_train_, y_train_)
     # Predict model
     nq = N_QUANTILES_PREDICT + 1
-    y_pred = model['model'].predict(X_test_, np.arange(1/nq, nq/nq, 1/nq))
+    y_pred = model['model'].predict(X_val_, np.arange(1/nq, nq/nq, 1/nq))
     # Evaluate model 
-    score = crps_ensemble_score(y_test, y_pred)
+    score = crps_ensemble_score(y_val, y_pred)
     return score
 
 def tune_model():
@@ -171,7 +173,7 @@ def tune_model():
     best_grid_pair = grid_pairs[np.argmin(gs_scores)]
     best_model_params = {param:value for param, value in zip(GRID_PARAMS[MODEL].keys(), best_grid_pair)}
     print("Best GridSearchCV model parameters:\n{}".format(best_model_params))
-    print("GridSearchCV score: {:.2f}".format(gs_score[np.argmin(gs_score)]))
+    print("GridSearchCV score: {:.2f}".format(gs_scores[np.argmin(gs_scores)]))
     print()
     # Tune best model
     model.set_params(**best_model_params)
@@ -193,6 +195,7 @@ def train_model():
     model = build_model()
     model.set_params(**PARAMS[MODEL])
     # Fit model
+    print("Train model: {}".format(MODEL))
     X_train_ = model[:-1].fit_transform(X_train)
     y_train_ = y_train.to_numpy()
     model["model"].fit(X_train_, y_train_)
@@ -201,7 +204,7 @@ def train_model():
     print("Save model to: {}".format(file_model))
     joblib.dump(model, file_model)
 
-def test_model():
+def test_model(use_approx=False):
     # Read dataset
     data, expname = read_dataset()
     # Get testing data
@@ -230,7 +233,7 @@ def test_model():
         # Get quantile prediction
         nq = N_QUANTILES_PREDICT + 1
         quantiles = np.arange(1/nq, nq/nq, 1/nq)
-        y_pred = model['model'].predict(X_test_, quantiles) 
+        y_pred = model['model'].predict(X_test_, quantiles, use_approx=use_approx) 
         results = pd.concat([
             pd.DataFrame({'station': data.loc[X_test.index.unique(), 'station_names'].values}, index=X_test.index),
             pd.DataFrame(y_pred.round(4), columns=quantiles.round(3), index=X_test.index)

@@ -39,6 +39,42 @@ def find_quant(trainy, train_tree_node_ID, pred_tree_node_ID, qntl):
         out[i, :] = np.quantile(sample, qntl)
     return out
 
+@jit(nopython=True, parallel=True)
+def find_quant_approx(trainy, train_tree_node_ID, pred_tree_node_ID, qntl):
+    """find_quant(trainy, train_tree_node_ID, pred_tree_node_ID, qntl)
+    
+    Aggregates the leaves from the random forest and calculates the quantiles.
+
+    Aggregates leaves based on the tree node indexes from both the training
+    and prediction data. Values from the training target data is then used
+    to rebuild the leaves for each prediction, which is then summarized
+    to the specified quantiles. This is the slowest step in the process,
+    so numba is used to speed up this step.
+
+    Parameters
+    ----------
+    trainy : numpy array of shape (n_target)
+        The origianl training target data
+    train_tree_node_ID : numpy array of shape (n_training_samples, n_trees)
+        array of leaf indices from the training data
+    pred_tree_node_ID : numpy array of shape (n_predict_samples, n_trees)
+        array of leaf indices from the prediction data
+    qntl : numpy array
+        quantiles used, must range from 0 to 1
+
+    Returns
+    -------
+    out : numpy array of shape (n_predict_samples, n_qntl)
+        prediction for each quantile
+    """
+    npred = pred_tree_node_ID.shape[0]
+    ntrees = pred_tree_node_ID.shape[1]
+    out = np.zeros((npred, qntl.size))*np.nan
+    for i in prange(pred_tree_node_ID.shape[0]):
+        idxs = np.where(train_tree_node_ID == pred_tree_node_ID[i, :])[0]
+        sample = trainy[np.random.choice(idxs, ntrees)]
+        out[i, :] = np.quantile(sample, qntl)
+    return out
 
 class QuantileRandomForestRegressor:
     """A quantile random forest regressor based on the scikit-learn RandomForestRegressor
@@ -88,7 +124,7 @@ class QuantileRandomForestRegressor:
         self.trainy = y.copy()
         self.trainX = X.copy()
 
-    def predict(self, X, qntl):
+    def predict(self, X, qntl=0.5, use_approx=False):
         """
         Predict regression target for X.
         The predicted regression target of an input sample is computed as the
@@ -107,6 +143,7 @@ class QuantileRandomForestRegressor:
         y : ndarray of shape (n_samples, n_qntl)
             The predicted values.
         """
+        #set_num_threads(self.forest.n_jobs)
         qntl = np.asanyarray(qntl)
         ntrees = self.forest.n_estimators
         ntrain = self.trainy.shape[0]
@@ -118,8 +155,13 @@ class QuantileRandomForestRegressor:
             train_tree_node_ID[:, i] = self.forest.estimators_[i].apply(self.trainX)
             pred_tree_node_ID[:, i] = self.forest.estimators_[i].apply(X)
 
-        ypred_pcts = find_quant(self.trainy, train_tree_node_ID,
-                                pred_tree_node_ID, qntl)
+        if not use_approx:
+            ypred_pcts = find_quant(self.trainy, train_tree_node_ID,
+                                    pred_tree_node_ID, qntl)
+        else:
+            print("Use approximation for prediction ...")
+            ypred_pcts = find_quant_approx(self.trainy, train_tree_node_ID,
+                                    pred_tree_node_ID, qntl)
 
         return ypred_pcts
 
@@ -234,7 +276,7 @@ class QuantileExtraTreesRegressor:
         self.trainy = y.copy()
         self.trainX = X.copy()
 
-    def predict(self, X, qntl):
+    def predict(self, X, qntl=0.5, use_approx=False):
         """
         Predict regression target for X.
         The predicted regression target of an input sample is computed as the
