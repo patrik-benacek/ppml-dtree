@@ -60,6 +60,7 @@ nc <- nc_open(file.path(input_data_dir, leadtime, paste0("data_aux_srf_", target
 dim_srf <- c(nc$dim$station$len, nc$dim$member$len, nc$dim$time$len)
 data_srf <- array(dim=c(length(surface_attr), dim_srf))
 date_srf <- as.POSIXct(ncvar_get(nc, "time"), origin = "1970-01-01 00:00", tz = "UTC")
+station_srf <- ncvar_get(nc, "station")
 
 for (i in seq_along(surface_attr)){
   feature = paste0(surface_attr[i], "_fc")
@@ -96,18 +97,23 @@ nc_close(nc)
 # Mask only complete instances i.e. both surface and pressure level data exist
 # Pressure level instances exist only if surface exist (see interpolation/interpolation_aux_pl850.R)
 # find instances when srf exist and plv not
-mask_date_plv <- date_srf %in% date_plv 
-mask_station_plv <- stations %in% station_plv
-mask_date_srf <- date_plv %in% date_srf 
-mask_station_srf <- station_plv %in% stations
+set_dates   = dates[(dates%in%date_srf & dates%in%date_plv)]
+set_station = stations[(stations%in%station_srf & stations%in%station_plv)]
+mask_station_plv <- station_plv %in% set_station
+mask_station_srf <- station_srf %in% set_station
+mask_station_fc <- stations %in% set_station
+mask_date_plv <- date_plv %in% set_dates
+mask_date_srf <- date_srf %in% set_dates
+mask_date_fc <- dates %in% set_dates
+
 # mask fields determined from surface files
-data_srf <- data_srf[,mask_station_plv,,mask_date_plv]
-fcdata <- fcdata[mask_station_plv,,mask_date_plv]
-obsdata <- obsdata[mask_station_plv,mask_date_plv]
-dates <- dates[mask_date_plv]
-stations <- stations[mask_station_plv]
-data_p850 <- data_p850[,mask_station_srf,,mask_date_srf]
-data_p500 <- data_p500[,mask_station_srf,,mask_date_srf]
+data_srf  <- data_srf[,mask_station_srf,,mask_date_srf]
+data_p850 <- data_p850[,mask_station_plv,,mask_date_plv]
+data_p500 <- data_p500[,mask_station_plv,,mask_date_plv]
+fcdata    <- fcdata[mask_station_fc,,mask_date_fc]
+obsdata   <- obsdata[mask_station_fc,mask_date_fc]
+dates     <- set_dates
+stations  <- set_station
 
 # keep only mean and var
 print("Calculate mean and variance features ...")

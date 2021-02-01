@@ -41,7 +41,7 @@ metadata_id <- merge(metadata_id, metadata, by.x = "wmo_id", by.y = "station_id"
 # Output station+model metadata file
 #write.csv(metadata_id, file = file.path(data_dir, "data", "metadata_all.csv"), row.names = FALSE)
 
-data <- read.csv(file.path(out_data_dir, leadtime, paste0("data_", target,"_", leadtime, ".csv")))
+data <- read.csv(file.path(out_data_dir, paste0("data_", target,"_", leadtime, ".csv")))
 data$date = as.Date(data$date)
 
 metadata_names <- c("date", "station", "station_names", "lon", "lat", "alt", "orog")
@@ -54,4 +54,4 @@ data <- merge(data, metadata_id, by.x = "station", by.y = "wmo_id")[,c(metadata_
 data <- data[order(data$date),]
 
 # Write data
-write.csv(data, file = file.path(out_data_dir, leadtime, paste0("data_wmeta_", target,"_", leadtime, ".csv")), row.names = FALSE)
+write.csv(data, file = file.path(out_data_dir, paste0("data_wmeta_", target,"_", leadtime, ".csv")), row.names = FALSE)
