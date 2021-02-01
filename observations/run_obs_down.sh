@@ -13,8 +13,8 @@ for YEAR in $YEARS; do
     echo "Download obs for $YEAR"
 
     # Downloading data
-    src/obs_download.R $OBS_COUNTRY $YEAR
+    #src/obs_download.R $OBS_COUNTRY $YEAR
 
     # Get sum of 24-hour precipitation
-    src/obs_sum_prec.R $YEAR
+    src/obs_sum_prec24.R $YEAR
 done
