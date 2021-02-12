@@ -12,10 +12,20 @@
 
 rm(list=ls())
 
+pkgTest <- function(x)
+  {
+    if (!require(x,character.only = TRUE))
+    {
+      install.packages(x,dep=TRUE)
+        if(!require(x,character.only = TRUE)) stop("Package not found")
+    }
+  }
+
 # Load packages
-suppressMessages(library(lubridate))
-suppressMessages(library(scoringRules))
-suppressMessages(library(crch))
+suppressMessages(pkgTest("lubridate"))
+suppressMessages(pkgTest("scoringRules"))
+suppressMessages(pkgTest("crch"))
+suppressMessages(pkgTest("readr"))
 
 # Input arguments
 args = commandArgs(trailingOnly=TRUE)
@@ -26,8 +36,8 @@ if (length(args)<3) {
 }
 
 target = args[1]
-start_train_year = args[2]
-leadtime_hours = args[3]
+leadtime_hours = args[2]
+start_train_year = args[3]
 
 # Settings
 exp_name <- "EMOS-local"
@@ -47,20 +57,20 @@ print(paste0("Leadtime: ", leadtime_hours, "h"))
 print(paste0("Train period: ", train_date[1], " to ", train_date[2]))
 print(paste0("Test period : ", eval_date[1], " to ", eval_date[2]))
 
-workdir <- "/home/patrik/Work/czechglobe/TIGGE/methods/benchmark/scripts"
-in_data_dir <- "/home/patrik/Work/czechglobe/TIGGE/data_preproc/generate_dataset/data"
-out_data_dir <- "/home/patrik/Work/czechglobe/TIGGE/methods/benchmark/results"
-setwd(workdir)
+in_data_dir <- "../../data_preproc/data/processed"
+out_data_dir <- "results"
 
-source("config.R")
+source("src/config.R")
 
 # Name of experiment
-exp_suffix = paste(target, leadtime, year(ymd(train_date[1])), year(ymd(train_date[2])), sep='_')
+#exp_suffix = paste(target, leadtime, year(ymd(train_date[1])), year(ymd(train_date[2])), sep='_')
+exp_suffix = paste(target, leadtime, year(ymd(train_date[1])), sep='_')
 
 # Read station measurements
-file_obs = paste0("data_wmeta_", target,"_", leadtime, "_2015_2019.csv")
-data <- read.csv(file.path(in_data_dir, file_obs))
+file_obs = paste0("data_", target, "_", leadtime, ".zip")
+data <- read_csv(file.path(in_data_dir, file_obs))
 data$date = as.Date(data$date)
+data$station_names = gsub(' / ', '-', data$station_names)
 
 print("")
 print("-------------------")
@@ -71,7 +81,7 @@ print(paste("--> columns:", dim(data)[2]))
 print(paste("Num. of metadata:", ncol(data[,c(1:7)])))
 print(paste("Num. of features:", ncol(data[,c(8:ncol(data))])))
 
-data <- data[, -which(!(names(data) %in% c("obs", "date", "station", paste0(target,"_mean"), paste0(target,"_var"))))]
+data <- data[, -which(!(names(data) %in% c("obs", "date", "station_names", paste0(target,"_mean"), paste0(target,"_var"))))]
 names(data)[4:5] <- c('fc_mean', 'fc_var')
   
 # Data cleaning: square-root scaled data (negative->NAN), remove NAN values, omit 'perfect' ensemble prediction
@@ -98,7 +108,7 @@ print("Forecast:")
 print("-------------------")
 t1 <- Sys.time()
 # List of stations
-stations_list <- unique(data$station)
+stations_list <- unique(data$station_names)
 out_loc <- rep(NA, nrow(data_eval_all))
 out_sc <- rep(NA, nrow(data_eval_all))
 skip_stations <- c()
@@ -106,7 +116,7 @@ skip_stations <- c()
 
 for(this_station in stations_list){
   
-  data_train <- subset(data_train_all, station == this_station)
+  data_train <- subset(data_train_all, station_names == this_station)
   
   # remove incomplete cases (= NA obs or fc)
   data_train <- data_train[complete.cases(data_train), ]
@@ -124,10 +134,10 @@ for(this_station in stations_list){
   
   # determine optimal EMOS coefficients a,b,c,d using minimum CRPS estimation
   emos_crps <- get_crch_model(train=data_train, target=target)
-  data_eval <- subset(data_eval_all, station == this_station)
+  data_eval <- subset(data_eval_all, station_names == this_station)
   
   # save parameters
-  ind_this_station <- which(data_eval_all$station == this_station)
+  ind_this_station <- which(data_eval_all$station_names == this_station)
   
   out_loc[ind_this_station] <- predict(emos_crps, type='location', newdata = data_eval[,c('fc_mean', 'fc_std')])
   out_sc[ind_this_station]  <- predict(emos_crps, type='scale'   , newdata = data_eval[,c('fc_mean', 'fc_std')])
@@ -149,7 +159,7 @@ if (target=='prec24'){
   data_eval_all$pp_mean <- out_loc
   data_eval_all$pp_std  <- out_sc 
 }
-data_eval_all <- data_eval_all[!(data_eval_all$station%in%skip_stations), ]
+data_eval_all <- data_eval_all[!(data_eval_all$station_names%in%skip_stations), ]
 
 # Model evaluation by scoringrule: 
 print("-------------------")
@@ -170,7 +180,7 @@ print(summary(scores[[2]]))
 print("")
 
 df_out <- data.frame(date = data_eval_all$date,
-                     station_id = data_eval_all$station,
+                     station = data_eval_all$station_names,
                      mean = data_eval_all$pp_mean,
                      std  = data_eval_all$pp_std
                      )

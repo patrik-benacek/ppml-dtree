@@ -1,6 +1,6 @@
-TARGET   = "t2m"    # t2m/prec24
+TARGET   = "prec24"    # t2m/prec24
 LEADTIME = "24h"    # 24h/240h
-MODEL    = "ngb"    # qrf/xtr/ngb
+MODEL    = "qrf"    # qrf/xtr/ngb
 STATION  = "Cheb"   # all/station_name
 
 DATA_DIR = "../../../data_preproc/data/processed/"

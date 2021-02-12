@@ -31,9 +31,6 @@ def read_dataset():
     # Load dataset
     data = load_dataset(f"data_{TARGET}_ff{LEADTIME}.zip")
 
-    # Experiment definition
-    expname = f"{TARGET}_ff{LEADTIME}_{STATION}"
-
     # Rename station name
     data = rename_station(data)
 
@@ -44,10 +41,10 @@ def read_dataset():
     print(f"Run model for {STATION} station.")
     print(30*"-")
     if STATION=='all':
-        return data, expname
+        return data 
     else:
         try:
-            return data[data.station_names==STATION], expname
+            return data[data.station_names==STATION]
         except OSError:
             print("Station {} not exist. Available stations: \n{}".format(STATION, data.station_names.unique()))
             sys.exit()

@@ -1,10 +1,8 @@
 #!/bin/bash
 leadtime=24
 start_train=2018
-variable="prec24"
+variable="t2m"
 reference_models="Raw-Fcst"
-normal_dist_models="EMOS-global EMOS-local NGBoost"
-sample_dist_models="QRF XTR"
 
 leval=TRUE
 lplot=TRUE
@@ -13,24 +11,23 @@ if [ $leval == "TRUE" ]; then
 #----------------------------------
 # Prepare ScoreFiles for evaluation
 #----------------------------------
+echo "Prepare Raw forecasts prediction"
+# Prepare raw forecast prediction 
+src/prep_eval_obs_raw.R $variable $leadtime
+
 # Reference Raw-Forec
 echo "Prepare ScoreFiles for Raw forecasts"
-for model in $reference_models; do
-    src/calc_scores.R results/prediction/pred_${model}_${variable}_ff${leadtime}h_2019_2019.csv normal
-    ln -s eval_scores_${model}_${variable}_ff${leadtime}h_2019_2019.Rdata results/eval_scores_${model}_${variable}_ff${leadtime}h_${start_train}_2019.Rdata
-done
+src/calc_scores.R results/prediction/pred_Raw-Fcst_${variable}_ff${leadtime}h_2019.csv normal
+mv results/eval_scores_Raw-Fcst_${variable}_ff${leadtime}h_2019.Rdata results/eval_scores_Raw-Fcst_${variable}_ff${leadtime}h_${start_train}.Rdata
 
-echo "Prepare ScoreFiles for Parametric models"
-# Parametric models (normal cdf)
-for model in $normal_dist_models; do
-    src/calc_scores.R results/prediction/pred_${model}_${variable}_ff${leadtime}h_${start_train}_2019.csv normal
-done
+echo "Prepare ScoreFiles for Parametric models (normal cdf)"
+src/calc_scores.R ../methods/benchmark/results/pred_EMOS-global_${variable}_ff${leadtime}h_${start_train}.csv normal
+src/calc_scores.R ../methods/benchmark/results/pred_EMOS-local_${variable}_ff${leadtime}h_${start_train}.csv normal
+src/calc_scores.R ../methods/tree_based/models/pred_ngb_${variable}_ff${leadtime}h_${start_train}.csv normal
 
-echo "Prepare ScoreFiles for Non-parametric models"
-# Non-parameteric models (sample cdf)
-for model in $sample_dist_models; do
-    src/calc_scores.R results/prediction/pred_${model}_${variable}_ff${leadtime}h_${start_train}_2019.csv sample
-done
+echo "Prepare ScoreFiles for Non-parametric models (sample cdf)"
+src/calc_scores.R ../methods/tree_based/models/pred_qrf_${variable}_ff${leadtime}h_${start_train}.csv sample
+src/calc_scores.R ../methods/tree_based/models/pred_xtr_${variable}_ff${leadtime}h_${start_train}.csv sample
 fi
 
 if [ $lplot == "TRUE" ]; then
@@ -38,7 +35,7 @@ if [ $lplot == "TRUE" ]; then
 # Run Visualisation
 #----------------------------------
 echo "Run visualisation ..."
-src/plot_scores.R results/eval_scores_*_${variable}_ff${leadtime}h_${start_train}_2019.Rdata
+src/plot_scores.R results/eval_scores_*_${variable}_ff${leadtime}h_${start_train}.Rdata
 fi
 
 echo "Finish."

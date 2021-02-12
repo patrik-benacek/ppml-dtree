@@ -19,11 +19,11 @@ def run_permutation_importance(n_features=10):
         * n_features: num. of most important features to plot 
     """
     # Read dataset
-    data, expname = read_dataset()
+    data = read_dataset()
     # Get testing data
     _, _, X_test, y_test = split_train_test(data)
     # Get trained model
-    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{expname}_{TRAIN_PERIOD[0]}.joblib")
+    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{TARGET}_ff{LEADTIME}_{STATION}_{TRAIN_PERIOD[0]}.joblib")
     print("Load trained model: {}".format(file_model))
     model = joblib.load(file_model) 
     X_test_ = model[:-1].fit_transform(X_test)
@@ -44,7 +44,7 @@ def run_permutation_importance(n_features=10):
     ax.set_title("Permutation Importances (test set)")
     fig.tight_layout()
     plt.savefig(
-        os.path.join(MODEL_DIR, f'feature_perimp_{MODEL}_{expname}_{TRAIN_PERIOD[0]}.png'), 
+        os.path.join(MODEL_DIR, f'feature_perimp_{MODEL}_{TARGET}_ff{LEADTIME}_{STATION}_{TRAIN_PERIOD[0]}.png'), 
         dpi = 600,
         bbox_inches = 'tight'
     )

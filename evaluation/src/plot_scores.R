@@ -5,8 +5,18 @@
 # Author: Patrik Benacek                                                                                                                                                                     
 #----------------------------------------------                                                                                                                                              
 rm(list=ls())  
-suppressMessages(library(tidyverse))
-suppressMessages(library(ggmap))
+
+pkgTest <- function(x)
+  {
+    if (!require(x,character.only = TRUE))
+    {
+      install.packages(x,dep=TRUE)
+        if(!require(x,character.only = TRUE)) stop("Package not found")
+    }
+  }
+
+suppressMessages(pkgTest("tidyverse"))
+suppressMessages(pkgTest("ggmap"))
 
 # Input arguments                                                                                                                                                                            
 args = commandArgs(trailingOnly=TRUE)                                                                                                                                                        
@@ -14,8 +24,8 @@ args = commandArgs(trailingOnly=TRUE)
 files = Sys.glob(args)
 
 # Paths                                                                                                                                                                                    
-outpath <- "/home/patrik/Work/czechglobe/TIGGE/evaluation/results/plots"
-obspath <- "/home/patrik/Work/czechglobe/TIGGE/observations/data"
+outpath <- "results/plots"
+obspath <- "../observations/data"
 
 is_reference_exp = FALSE
 allscores = data.frame()
@@ -27,11 +37,11 @@ for (i in seq_along(files)){
     stop(paste0("Input file", file, "does not exist."))
   }
   # Read exp metadata
-  filename = basename(file)
+  filename = gsub('.Rdata', '', basename(file))
   meta = strsplit(filename, "_")[[1]]
   # Check the name of the ScoreFile
-  if (length(meta)!=7){
-    stop("Input filename has not valid name. Use e.g.: eval_scores_EMOS-global_t2m_ff24h_2015_2019.Rdata")
+  if (length(meta)!=6){
+    stop("Input filename has not valid name. Use e.g.: eval_scores_EMOS-global_t2m_ff24h_2015.Rdata")
   }                                                                                                                                                                                            
   # Check the consistency of input ScoreFiles
   if (i==1){
@@ -61,16 +71,19 @@ if ('Raw-Fcst' %in% expnames){
 
 # Read stations' metedata
 obs_meta = read.csv(file.path(obspath, 'metadata_stations.csv'), 
-                    col.names = c('station_id', 'station_names', 'lon', 'lat', 'alt'))
+                    col.names = c('station_id', 'station', 'lon', 'lat', 'alt'))
+# trimws(lstrip+rstrip) + substitute
+obs_meta$station = trimws(gsub(' / ', '-', obs_meta$station))
+
 # Merge station with scorefiles
-allscores = merge(allscores, obs_meta, by = 'station_id')
+allscores = merge(allscores, obs_meta, by = 'station')
 
 #--------------------------
 # Visualisation
 #--------------------------
 # Save plot function
-savefig <- function(plot, name, type='png', width=1400, height=960, res=300){
-  fig_suffix <- paste0(paste(target, fc_time, start_train, "2019", sep="_"), '.', type)
+savefig <- function(plot, name, type='png', width=2.2*1400, height=2.2*960, res=2*300){
+  fig_suffix <- paste0(paste(target, fc_time, start_train, sep="_"), '.', type)
   if (type=='png'){
     png(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height, res=res)
     print(plot)
@@ -91,7 +104,7 @@ pl <- allscores %>%
   xlab('PIT') + #ggtitle("PIT histograms") +
   facet_wrap(~exp) +
   theme_bw()
-savefig(pl, name="PIT_overall", res=250)
+savefig(pl, name="PIT_overall")
 
 # CRPS scores
 pl <- allscores %>% 
@@ -105,7 +118,7 @@ pl <- allscores %>%
   geom_text(aes(label = round(mCRPS, 2), y=0), vjust = -0.5, size=3) +
   xlab('Model') + ylab('Mean CRPS') +
   theme_bw()
-savefig(pl, name="CRPS_overall", res=250)
+savefig(pl, name="CRPS_overall")
 
 # Absolute Error
 pl <- allscores %>% 
@@ -119,7 +132,7 @@ pl <- allscores %>%
   geom_text(aes(label = round(mAE, 2), y=0), vjust = -0.5, size=3) +
   xlab('Model') + ylab('AE of mean forecast') +
   theme_bw()
-savefig(pl, name="AE_overall", res=250)
+savefig(pl, name="AE_overall")
   
 # CRPS score values in domain
 register_google(key="AIzaSyCM_lvOP7nXiLHFuV96DL4mrXBitJWRHEc")
@@ -132,11 +145,11 @@ map <- get_googlemap(
 
 # Prepare domain crps scores
 crps_scores <- allscores %>% 
-  group_by(exp, station_id) %>% 
+  group_by(exp, station) %>% 
   summarise(
     mCRPS = mean(crps)
   ) %>% 
-  left_join(obs_meta, by = 'station_id')
+  left_join(obs_meta, by = 'station')
 
 pl <- ggmap(map) + 
   geom_point(data = crps_scores, aes(x = lon, y = lat), colour = "black", size=2.5) + 
@@ -145,7 +158,7 @@ pl <- ggmap(map) +
   labs(x = "Longitude", y = "Latitude", col="Mean CRPS") + 
   theme(legend.position="bottom") +
   facet_wrap(~exp)
-savefig(pl, name="CRPS_domain", height = 1400, res=200)
+savefig(pl, name="CRPS_domain", height = 2.2*1400, width=2.2*1400)
 
 # Relative crps scores wrt RAW forecast: 1-(exp/RAW) where 0=RAWquality, 1=100%improvement)
 if (is_reference_exp){
@@ -154,7 +167,7 @@ if (is_reference_exp){
     if (exp=='Raw-Fcst') next()
     spread_crps[,exp] = 100*(1-(spread_crps[,exp]/spread_crps[,"Raw-Fcst"]))
   }
-  crps_scores_rel <- spread_crps %>% select(-alt, -station_names,-`Raw-Fcst`) %>% 
+  crps_scores_rel <- spread_crps %>% select(-alt, -station_id,-`Raw-Fcst`) %>% 
     gather(exp, rCRPS, expnames[expnames!="Raw-Fcst"]) 
 
   pl <- ggmap(map) + 
@@ -164,5 +177,5 @@ if (is_reference_exp){
     labs(x = "Longitude", y = "Latitude", col="CRPS improvement \n wrt RawFc [%]") + 
     theme(legend.position="bottom") +
     facet_wrap(~exp)
-  savefig(pl, name="rCRPS_domain", height = 1400, res=200)
+  savefig(pl, name="rCRPS_domain", height = 2.2*1400, width=2.2*1400)
 }
