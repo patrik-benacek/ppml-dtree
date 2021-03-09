@@ -220,7 +220,7 @@ def test_model(use_approx=False):
     print("Load trained model: {}".format(file_model))
     model = joblib.load(file_model)
     # Get model features
-    column_names = get_model_features(model['preproc'])
+    column_names = get_feature_names(model['preproc'])
     # Get quantile prediction
     nq = N_QUANTILES_PREDICT + 1
     quantiles = np.arange(1/nq, nq/nq, 1/nq)
@@ -229,7 +229,7 @@ def test_model(use_approx=False):
 
     if MODEL == 'ngb':
         # Get normal-distribution parameters prediction 
-        y_dist = model['model'].pred_dist(X_test_)
+        y_dist = model['model'].pred_dist(X_test_.to_numpy())
         results = pd.DataFrame({
             'station': data.loc[X_test.index.unique(), 'station_names'].values,
             #'obs': y_test.values,
