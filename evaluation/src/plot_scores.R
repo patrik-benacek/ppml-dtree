@@ -98,7 +98,7 @@ savefig <- function(plot, name, type='png', width=2.2*1400, height=2.2*960, res=
 # PIT scores
 pl <- allscores %>% 
   ggplot(aes(pit)) +
-  geom_histogram(aes(y=..density..), color='black', fill='white', bins=30) + 
+  geom_histogram(aes(y=..density..), color='black', fill='white', bins=20) + 
   ylim(c(0,1.5)) + 
   geom_hline(yintercept = 1, lty=2) +
   xlab('PIT') + #ggtitle("PIT histograms") +
