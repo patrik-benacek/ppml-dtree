@@ -35,13 +35,15 @@ def split_train_test(df):
     y = df['obs']
 
     # Split dataset
-    x_train, y_train = x[str(TRAIN_PERIOD[0]):str(TRAIN_PERIOD[-1])], y[str(TRAIN_PERIOD[0]):str(TRAIN_PERIOD[-1])]
-    x_test, y_test   = x[str(TEST_PERIOD[0]):str(TEST_PERIOD[-1])], y[str(TEST_PERIOD[0]):str(TEST_PERIOD[-1])]
+    mask_train_set = x.index.year.isin(TRAIN_PERIOD)
+    mask_test_set  = x.index.year.isin(TEST_PERIOD)
+    x_train, y_train = x[mask_train_set], y[mask_train_set]
+    x_test, y_test   = x[mask_test_set], y[mask_test_set]
 
     # Set training period
     print("Split dataset...")
-    print("Train: {}-{}".format(x_train.index.min().year, x_train.index.max().year))
-    print("Test:  {}-{}".format(x_test.index.min().year, x_test.index.max().year))
+    print("Train: {}".format(x_train.index.year.unique().to_list()))
+    print("Test:  {}".format(x_test.index.year.unique().to_list()))
     print()
     return x_train, y_train, x_test, y_test
 
@@ -103,7 +105,7 @@ def run_ngb_estimator(hpar, data):
     # early stopping not work correctly. Problem with loss_eval values (@patrik)
     # model.fit(X_train, y_train, model__X_val=X_val.to_numpy(), model__Y_val=y_val, model__early_stopping_rounds=10)
     # Get (normal) distribution parameters prediction 
-    X_val_ = model[:-1].fit_transform(X_val)
+    X_val_ = model[:-1].transform(X_val)
     y_dist = model['model'].pred_dist(X_val_) 
     # Evaluation
     score = crps_gaussian_score(y_val, loc=y_dist.params['loc'], scale=y_dist.params['scale'])
@@ -122,7 +124,7 @@ def run_tree_estimator(hpar, data):
     model.set_params(**dic_params)
     # Prepare train/validation datasets
     X_train_ = model[:-1].fit_transform(X_train)
-    X_val_  = model[:-1].fit_transform(X_val)
+    X_val_  = model[:-1].transform(X_val)
     y_train_ = y_train.to_numpy()
     # Fit model
     model['model'].fit(X_train_, y_train_)
@@ -211,20 +213,23 @@ def test_model(use_approx=False):
     data = read_dataset()
     # Get testing data
     _, _, X_test, y_test = split_train_test(data)
-    # Get trained model
-    file_model = os.path.join(MODEL_DIR, f"model_{MODEL}_{TARGET}_ff{LEADTIME}_{STATION}_{TRAIN_PERIOD[0]}.joblib")
+    # Load trained model
+    file_model = os.path.join(
+        MODEL_DIR, 
+        f"model_{MODEL}_{TARGET}_ff{LEADTIME}_{STATION}_{TRAIN_PERIOD[0]}.joblib")
     print("Load trained model: {}".format(file_model))
     model = joblib.load(file_model)
-
+    # Get model features
+    column_names = get_model_features(model['preproc'])
     # Get quantile prediction
     nq = N_QUANTILES_PREDICT + 1
     quantiles = np.arange(1/nq, nq/nq, 1/nq)
     # Make prediction
-    X_test_  = pd.DataFrame(model[:-1].fit_transform(X_test), columns=get_feature_names(model['preproc']))
+    X_test_  = pd.DataFrame(model[:-1].transform(X_test), columns=column_names)
 
     if MODEL == 'ngb':
         # Get normal-distribution parameters prediction 
-        y_dist = model['model'].pred_dist(X_test_) 
+        y_dist = model['model'].pred_dist(X_test_)
         results = pd.DataFrame({
             'station': data.loc[X_test.index.unique(), 'station_names'].values,
             #'obs': y_test.values,
@@ -248,7 +253,7 @@ def test_model(use_approx=False):
         # Backward square-root transformation for precipitation
         results = pd.concat([
             pd.DataFrame({'station': data.loc[X_test.index.unique(), 'station_names'].values}, index=X_test.index),
-            pd.DataFrame(y_pred.round(4), columns=quantiles.round(3), index=X_test.index)
+            pd.DataFrame(y_pred.round(4), columns=quantiles.round(4), index=X_test.index)
             ], axis=1)
         # Evaluate prediction
         crps_score_model = crps_ensemble_score(y_test, y_pred)
