@@ -88,7 +88,7 @@ The results are summarized in the technical report:
     
 ## Acknowledgement
 
-This study was progressed rapidly thanks to Stephan Lerch and Sebastian Rasp who provided the public with the source code of their project (Rasp and Lerch, 2018). 
+This project was funded by the Global Czech Reasearch Institute CAS within the CzeGGA 2020 project. This project was progressed rapidly thanks to Stephan Lerch and Sebastian Rasp who provided the public with the source code of their project (Rasp and Lerch, 2018). 
 
 
 ## References
