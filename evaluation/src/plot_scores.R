@@ -17,11 +17,23 @@ pkgTest <- function(x)
 
 suppressMessages(pkgTest("tidyverse"))
 suppressMessages(pkgTest("ggmap"))
+suppressMessages(pkgTest("jsonlite"))
+
+get_secret <- function() {
+  path <- "src/secret.json"
+  if (!file.exists(path)) {
+    stop("Can't find secret file: '", path, "'")
+  }
+
+  return(jsonlite::fromJSON(path))
+}
 
 # Input arguments                                                                                                                                                                            
 args = commandArgs(trailingOnly=TRUE)                                                                                                                                                        
+#setwd('/home/patrik/Work/czechglobe/TIGGE/evaluation/')
 
 files = Sys.glob(args)
+#files = Sys.glob("results/eval_scores_*_t2m_ff24h_2018.Rdata")
 
 # Paths                                                                                                                                                                                    
 outpath <- "results/plots"
@@ -59,16 +71,6 @@ for (i in seq_along(files)){
   allscores = rbind(allscores, readRDS(file)) 
 }
 
-# Experiment summary
-expnames <- unique(allscores$exp)
-print(paste("The following experiments are compared:"))
-print(expnames)
-
-if ('Raw-Fcst' %in% expnames){
-  is_reference_exp = TRUE
-  print("Reference exist.")
-}
-
 # Read stations' metedata
 obs_meta = read.csv(file.path(obspath, 'metadata_stations.csv'), 
                     col.names = c('station_id', 'station', 'lon', 'lat', 'alt'))
@@ -78,36 +80,59 @@ obs_meta$station = trimws(gsub(' / ', '-', obs_meta$station))
 # Merge station with scorefiles
 allscores = merge(allscores, obs_meta, by = 'station')
 
+# Rename experiments
+allscores$exp <- recode(allscores$exp, 
+                        qrf = "QRF", 
+                        xtr = "XTR", 
+                        `EMOS-global` = "EMOS-glb", 
+                        `EMOS-local` = "EMOS-loc", 
+                        `Raw-Fcst` = "RAW", 
+                        ngb = "NGB")
+
+# Experiment summary
+expnames <- unique(allscores$exp)
+print(paste("The following experiments are compared:"))
+print(expnames)
+
+if ('RAW' %in% expnames){
+  is_reference_exp = TRUE
+  print("Reference exist.")
+}
+
+
 #--------------------------
 # Visualisation
 #--------------------------
+# Suffix for figures
+fig_suffix <- paste(target, fc_time, start_train, sep="_")
+
 # Save plot function
-savefig <- function(plot, name, type='png', width=2.2*1400, height=2.2*960, res=2*300){
-  fig_suffix <- paste0(paste(target, fc_time, start_train, sep="_"), '.', type)
-  if (type=='png'){
-    png(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height, res=res)
-    print(plot)
-    dev.off()
-  }else if(type=='pdf'){
-    pdf(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height)
-    print(plot)
-    dev.off()
-  }
-}
+#savefig <- function(plot, name, type='png', width=2.2*1400, height=2.2*960, res=2*300){
+#  fig_suffix <- paste0(paste(target, fc_time, start_train, sep="_"), '.', type)
+#  if (type=='png'){
+#    png(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height, res=res)
+#    print(plot)
+#    dev.off()
+#  }else if(type=='pdf'){
+#    pdf(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height)
+#    print(plot)
+#    dev.off()
+#  }
+#}
 
 # PIT scores
-pl <- allscores %>% 
+allscores %>% 
   ggplot(aes(pit)) +
-  geom_histogram(aes(y=..density..), color='black', fill='white', bins=20) + 
+  geom_histogram(aes(y=..density..), color='black', fill='white', bins=10) + 
   ylim(c(0,1.5)) + 
   geom_hline(yintercept = 1, lty=2) +
   xlab('PIT') + #ggtitle("PIT histograms") +
   facet_wrap(~exp) +
   theme_bw()
-savefig(pl, name="PIT_overall")
+ggsave(file.path(outpath, paste0("plot_PIT_overall_", fig_suffix,".pdf")), device = cairo_pdf)
 
 # CRPS scores
-pl <- allscores %>% 
+allscores %>% 
   group_by(exp) %>% 
   summarise(
     mCRPS = mean(crps)
@@ -115,13 +140,13 @@ pl <- allscores %>%
   ggplot(aes(x=factor(exp), y=mCRPS, fill=factor(exp))) +
   geom_col(color='black', fill='grey') + 
   #geom_col(color='black') + # use to colorize columns
-  geom_text(aes(label = round(mCRPS, 2), y=0), vjust = -0.5, size=3) +
+  geom_text(aes(label = round(mCRPS, 2), y=0), vjust = -0.5, size=4) +
   xlab('Model') + ylab('Mean CRPS') +
   theme_bw()
-savefig(pl, name="CRPS_overall")
+ggsave(file.path(outpath, paste0("plot_CRPS_overall_", fig_suffix,".pdf")), device = cairo_pdf)
 
 # Absolute Error
-pl <- allscores %>% 
+allscores %>% 
   group_by(exp) %>% 
   summarise(
     mAE = mean(ae)
@@ -129,16 +154,18 @@ pl <- allscores %>%
   ggplot(aes(x=factor(exp), y=mAE, fill=factor(exp))) +
   geom_col(color='black', fill='grey') + 
   #geom_col(color='black') + # use to colorize columns
-  geom_text(aes(label = round(mAE, 2), y=0), vjust = -0.5, size=3) +
+  geom_text(aes(label = round(mAE, 2), y=0), vjust = -0.5, size=4) +
   xlab('Model') + ylab('AE of mean forecast') +
   theme_bw()
-savefig(pl, name="AE_overall")
+ggsave(file.path(outpath, paste0("plot_AE_overall_", fig_suffix,".pdf")), device = cairo_pdf)
   
-# CRPS score values in domain
-register_google(key="AIzaSyCM_lvOP7nXiLHFuV96DL4mrXBitJWRHEc")
+# Google key (in src/secret.json)
+secret <- get_secret()
+register_google(key=secret$google_key)
 
+# CRPS score values in domain
 map <- get_googlemap(                                                                                                                                                                        
-  center = c(15.55, 49.8), zoom = 7, maptype = "terrain", scale = 1,
+  center = c(15.55, 49.8), zoom = 7, maptype = "terrain", scale = 1, color='bw',
   style = 'feature:road|element:all|visibility:off&style=feature:all|element:labels|visibility:off&sensor=false'
   #color = "bw"
 )                                                                                                                                                                                            
@@ -151,31 +178,31 @@ crps_scores <- allscores %>%
   ) %>% 
   left_join(obs_meta, by = 'station')
 
-pl <- ggmap(map) + 
+ggmap(map) + 
   geom_point(data = crps_scores, aes(x = lon, y = lat), colour = "black", size=2.5) + 
   geom_point(data = crps_scores, aes(x = lon, y = lat, colour = mCRPS), size=2) + 
   scale_colour_gradient(low = "blue", high = "red") + 
-  labs(x = "Longitude", y = "Latitude", col="Mean CRPS") + 
-  theme(legend.position="bottom") +
+  labs(x = "Longitude", y = "Latitude", col="CRPS") + 
+  theme(legend.position="right") +
   facet_wrap(~exp)
-savefig(pl, name="CRPS_domain", height = 2.2*1400, width=2.2*1400)
+ggsave(file.path(outpath, paste0("plot_CRPS_domain_", fig_suffix,".pdf")), device = cairo_pdf)
 
 # Relative crps scores wrt RAW forecast: 1-(exp/RAW) where 0=RAWquality, 1=100%improvement)
 if (is_reference_exp){
   spread_crps <- spread(crps_scores, exp, mCRPS)
   for (exp in expnames){
-    if (exp=='Raw-Fcst') next()
-    spread_crps[,exp] = 100*(1-(spread_crps[,exp]/spread_crps[,"Raw-Fcst"]))
+    if (exp=='RAW') next()
+    spread_crps[,exp] = 100*(1-(spread_crps[,exp]/spread_crps[,"RAW"]))
   }
-  crps_scores_rel <- spread_crps %>% select(-alt, -station_id,-`Raw-Fcst`) %>% 
-    gather(exp, rCRPS, expnames[expnames!="Raw-Fcst"]) 
+  crps_scores_rel <- spread_crps %>% select(-alt, -station_id,-RAW) %>% 
+    gather(exp, rCRPS, expnames[expnames!="RAW"]) 
 
-  pl <- ggmap(map) + 
+  ggmap(map) + 
     geom_point(data = crps_scores_rel, aes(x = lon, y = lat), colour = "black", size=2.5) + 
     geom_point(data = crps_scores_rel, aes(x = lon, y = lat, colour = rCRPS), size=2) + 
-    scale_colour_gradient2(low = "red", mid="white", high = "blue", midpoint=0) + 
-    labs(x = "Longitude", y = "Latitude", col="CRPS improvement \n wrt RawFc [%]") + 
-    theme(legend.position="bottom") +
+    scale_colour_gradient2(low = "red", mid="white", high = "blue", midpoint=0, breaks=seq(-100,100,20)) + 
+    labs(x = "Longitude", y = "Latitude", col="CRPSS [%]") + 
+    theme(legend.position="right") +
     facet_wrap(~exp)
-  savefig(pl, name="rCRPS_domain", height = 2.2*1400, width=2.2*1400)
+  ggsave(file.path(outpath, paste0("plot_CRPSS_domain_", fig_suffix,".pdf")), device = cairo_pdf)
 }

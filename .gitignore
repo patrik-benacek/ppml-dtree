@@ -7,6 +7,7 @@ methods/benchmark/results
 methods/tree_based/results
 evaluation/plots
 evaluation/results
+evaluation/src/secret.json
 methods/tree_based/src/backup
 methods/tree_based/src/config.py
 methods/tree_based/src/run.ipynb
