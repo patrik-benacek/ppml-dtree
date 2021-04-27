@@ -141,6 +141,9 @@ for(this_station in stations_list){
   
   out_loc[ind_this_station] <- predict(emos_crps, type='location', newdata = data_eval[,c('fc_mean', 'fc_std')])
   out_sc[ind_this_station]  <- predict(emos_crps, type='scale'   , newdata = data_eval[,c('fc_mean', 'fc_std')])
+
+  # Print model summary
+  print(summary(emos_crps))
 }
 t2 <- Sys.time()
 print(paste0("Computational time: ", round(t2-t1, 1), "s"))

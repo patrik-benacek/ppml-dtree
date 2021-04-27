@@ -128,6 +128,9 @@ if (target=='prec24'){
   data_eval_all$pp_std  <- predict(emos_crps, type='scale'   , newdata = data_eval_all[,c('fc_mean', 'fc_std')])
 }
 
+# Print model summary
+print(summary(emos_crps))
+
 # Model evaluation by scoringrule: 
 print("-------------------")
 print("CRPS scores:")

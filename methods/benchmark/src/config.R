@@ -1,6 +1,16 @@
-get_crch_model <- function(train, target){
-    if (target == 't2m'){ 
+get_crch_model <- function(train, target, boost=FALSE){
+    if (target == 't2m' & boost == FALSE){ 
         model <- crch(obs~fc_mean | I(fc_std^2), data = train, dist="gaussian"  , link.scale = "quad", type='crps')
+    }
+    # Boosting EMOS not work correctly (zero coefficients)
+    if (target == 't2m' & boost == TRUE){ 
+        model <- crch(obs ~ fc_mean+orog_error | I(fc_std^2),
+                      data = train,
+                      dist = "gaussian",
+                      link.scale = "quad",
+                      method = "boosting",
+                      type='crps',
+                      mstop = "aic")
     }
     if (target == 'prec24'){ 
         model <- crch(obs~fc_mean | log(fc_std), data = train, dist = 'logistic', link.scale = "log" , left = 0, type='crps') # crch has better scores than trch
