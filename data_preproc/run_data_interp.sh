@@ -14,15 +14,15 @@ for LEADTIME in $LEADTIMES; do
             ./run_data_deaccum.sh
         fi
         # Target variables
-        src/interpolation_target_${TARGET}.R $LEADTIME
+        src/interp_target_${TARGET}.R $LEADTIME
     done
 done
 
 # Auxilliary features 
 for LEADTIME in $LEADTIMES; do
-    src/interpolation_aux_srf.R $LEADTIME
-    src/interpolation_aux_plv.R $LEADTIME 850
-    src/interpolation_aux_plv.R $LEADTIME 500
+    src/interp_aux_srf.R $LEADTIME
+    src/interp_aux_plv.R $LEADTIME 850
+    src/interp_aux_plv.R $LEADTIME 500
 done
 
 # Model orograpy metadata

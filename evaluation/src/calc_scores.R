@@ -68,11 +68,11 @@ if (family=='normal'){
   
 # Calculate scores given observations and draws from the predictive distribution
 }else if (family=='sample'){
-  max_sample_bin = 51
   fc_matrix <- as.matrix(mdata[,4:ncol(mdata)])
   df_res$crps <- crps_sample(y = mdata$obs, dat = fc_matrix)
   df_res$pit  <- sapply(seq_along(1:nrow(fc_matrix)),
-                    function(i) rank(c(mdata$obs[i], fc_matrix[i,]))[1])/max_sample_bin
+                    function(i) rank(c(mdata$obs[i], fc_matrix[i,]))[1])
+  #                  function(i) rank(c(mdata$obs[i], fc_matrix[i,]))[1])/max_sample_bin
   df_res$ae   <- abs(mdata$obs - apply(fc_matrix, 1, median))
 }else{
   stop(paste("Family", family, "is not defined. Stop."))

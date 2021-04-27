@@ -20,3 +20,9 @@ methods/tree_based/config/config.py
 methods/tree_based/config/__pycache__
 methods/tree_based/notebook
 methods/tree_based/config/config_test.py
+methods/benchmark/log_emos_glb_t2m_f24_2015.out
+methods/benchmark/log_emos_loc_t2m_f24_2015.out
+evaluation/src/prep_eval_obs_raw.R~
+evaluation/src/plot_scores.R~
+evaluation/src/calc_scores.R~
+methods/benchmark/src/xemos_global_boost_crch.R

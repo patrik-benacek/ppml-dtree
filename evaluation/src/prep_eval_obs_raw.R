@@ -1,52 +1,102 @@
-#!/usr/bin/env Rscript                                                                                                                                                                       
+#!/usr/bin/env Rscript
 
-pkgTest <- function(x)
-  {
-    if (!require(x,character.only = TRUE))
-    {
-      install.packages(x,dep=TRUE)
-        if(!require(x,character.only = TRUE)) stop("Package not found")
-    }
-  }
+## Prepare CSV dataset from interpolated data
+# Usage: 
+# ./merge_interp_data.R $leadtime[24/240] $target[t2m/prec24]
+# 
+# Info:
+#   * prec24: square-root transformation is applied
 
-suppressMessages(pkgTest("readr"))
+rm(list=ls())
 
 # Input arguments
 args = commandArgs(trailingOnly=TRUE)
 
-exp_name = 'Raw-Fcst'
+## load data
+DATADIR <- "../data_preproc/data/interp/"
+METADIR <- "../observations/data/"
+RESDIR  <- "results/"
+
 target   = args[1] 
-leadtime = args[2]
+leadtime = paste0("ff",args[2],"h")
 
-in_data_dir = "../data_preproc/data/processed"
-
-# Read station measurements                                                                                                                                                                  
-file_obs = paste0("data_", target, "_ff", leadtime, "h.zip")                                                                                                                    
-data <- read_csv(file.path(in_data_dir, file_obs))                                                                                                                                           
-data$date = as.Date(data$date)                                                                                                                                                               
-data$station_names = gsub(' / ', '-', data$station_names)
-  
-data <- data[, -which(!(names(data) %in% c("obs", "date", "station_names", paste0(target,"_mean"), paste0(target,"_var"))))]                                                                       
-names(data)[2:5] <- c('station', 'obs', 'mean', 'var')
+# debugging
+#target   = 't2m'
+#leadtime = 'ff24h'
+#setwd('/home/patrik/Work/czechglobe/TIGGE/evaluation')
 
 # Evaluation period
 start_eval <- as.Date("2019-01-01 00:00", tz = "UTC")
-end_eval <- as.Date("2019-12-31 00:00", tz = "UTC") 
-data <- subset(data, date >= start_eval & date <= end_eval)
+end_eval <- as.Date("2019-12-31 00:00", tz = "UTC")
 
-# Data cleaning: square-root scaled data (negative->NAN), remove NAN values, omit 'perfect' ensemble prediction                                                                              
-data <- data[data$var>0,]                                                                                                                                                                 
-data <- data[!is.na(data$obs),]                                                                                                                                                              
-data <- data[!is.na(data$mean),]                                                                                                                                                          
-data$std <- sqrt(data$var) 
-data$var <- NULL
+library(ncdf4)
+library(tidyverse)
 
-if (target=="prec24"){
-    print("Data are transformed back from square-root transformation (applied before running ML models.)")
-    data$obs  = data$obs**2
-    data$mean = data$mean**2
+# Read metadata
+meta <- read_csv(file.path(METADIR, "metadata_stations.csv"))[,c(1:2)]
+colnames(meta) <- c('station_id', 'station')
+meta$station = gsub(' / ', '-', meta$station)
+
+print("Read target data ...")
+# Target data
+nc <- nc_open(file.path(DATADIR, leadtime, paste0("data_target_", target, "_interp.nc")))
+  #if (target=='prec24'){
+  #  # Square-root transformation
+  #  print("--> Square root transformation for preciptation data!!")
+  #  fcdata <- sqrt(ncvar_get(nc, paste0(target, "_fc")))
+  #  obsdata <- sqrt(ncvar_get(nc, paste0(target, "_obs")))
+  #}else{
+  fcdata <- ncvar_get(nc, paste0(target, "_fc"))
+  obsdata <- ncvar_get(nc, paste0(target, "_obs"))
+  #}
+  dates <- as.POSIXct(ncvar_get(nc, "time"), origin = "1970-01-01 00:00", tz = "UTC")
+  stations <- ncvar_get(nc, "station")
+  
+  station_metadata <- list()
+  station_metadata$altitudes <- ncvar_get(nc, "station_alt")
+  station_metadata$latitudes <- ncvar_get(nc, "station_lat")
+  station_metadata$longitudes <- ncvar_get(nc, "station_lon")
+  station_metadata$locations <- ncvar_get(nc, "station_loc")
+nc_close(nc)
+
+dates_vec <- rep(dates, each = length(stations))
+stations_vec <- rep(stations, length(dates))
+# Prepare observations
+obs <- data.frame(dates_vec, 
+                  stations_vec,
+                  c(obsdata)) 
+names(obs) <- c("date", "station_id", "obs")
+# Evaluation period only
+obs <- subset(obs, date >= start_eval & date <= end_eval)
+# Drop nan
+obs <- obs[!is.na(obs$obs),] 
+# Join metadata
+obs <- obs %>% 
+  right_join(meta) %>% 
+  select(-station_id)
+# Save obs
+saveRDS(obs, file = file.path(RESDIR, paste0("eval_obs_", target, '_', leadtime, "_2019.RData")))
+
+# Prepare forecast
+data <- data.frame()
+for (imem in seq(dim(fcdata)[2])){
+  #print(paste0("Prepare for member: ", imem))
+  d <- data.frame(dates_vec,
+                  stations_vec,
+                  round(c(fcdata[,imem,]), 4)
+                  )
+  names(d) <- c("date", "station_id", "fc")
+  d$member = imem
+  data = rbind(data, d)
 }
+# Broadcast members to wide format
+data_wide <- data %>% 
+  spread('member', 'fc') %>% 
+  right_join(meta) %>% 
+  select(-station_id)
 
-saveRDS(data[,c('date', 'station', 'obs')], file = file.path('results', paste0("eval_obs_", target, '_ff', leadtime, "h_2019.RData")))
-
-write.csv(data[,c('date', 'station', 'mean', 'std')], file = file.path('results', 'prediction', paste0('pred_', exp_name, "_", target, "_ff", leadtime ,"h_2019.csv")), row.names = FALSE)
+# Evaluation period only
+data_wide <- subset(data_wide, date >= start_eval & date <= end_eval)
+  
+# Save forecast
+write.csv(data_wide, file = file.path(RESDIR, 'prediction', paste0("pred_Raw-Fcst_", target, "_", leadtime ,"_2019.csv")), row.names = FALSE)

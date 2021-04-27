@@ -18,6 +18,7 @@ pkgTest <- function(x)
 suppressMessages(pkgTest("tidyverse"))
 suppressMessages(pkgTest("ggmap"))
 suppressMessages(pkgTest("jsonlite"))
+suppressMessages(pkgTest("gridExtra"))
 
 get_secret <- function() {
   path <- "src/secret.json"
@@ -29,11 +30,11 @@ get_secret <- function() {
 }
 
 # Input arguments                                                                                                                                                                            
-args = commandArgs(trailingOnly=TRUE)                                                                                                                                                        
+args = commandArgs(trailingOnly=TRUE)
 #setwd('/home/patrik/Work/czechglobe/TIGGE/evaluation/')
 
 files = Sys.glob(args)
-#files = Sys.glob("results/eval_scores_*_t2m_ff24h_2018.Rdata")
+#files = Sys.glob("results/eval_scores_*_t2m_ff24h_2015.Rdata")
 
 # Paths                                                                                                                                                                                    
 outpath <- "results/plots"
@@ -106,44 +107,73 @@ if ('RAW' %in% expnames){
 # Suffix for figures
 fig_suffix <- paste(target, fc_time, start_train, sep="_")
 
-# Save plot function
-#savefig <- function(plot, name, type='png', width=2.2*1400, height=2.2*960, res=2*300){
-#  fig_suffix <- paste0(paste(target, fc_time, start_train, sep="_"), '.', type)
-#  if (type=='png'){
-#    png(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height, res=res)
-#    print(plot)
-#    dev.off()
-#  }else if(type=='pdf'){
-#    pdf(file.path(outpath, paste('plot', name, fig_suffix, sep='_')), width=width, height=height)
-#    print(plot)
-#    dev.off()
-#  }
-#}
+# Convert expnames to factor
+exp_levels = c('RAW','EMOS-loc','EMOS-glb','QRF','XTR','NGB')
+allscores$exp = factor(allscores$exp, levels=exp_levels)
 
 # PIT scores
-allscores %>% 
-  ggplot(aes(pit)) +
-  geom_histogram(aes(y=..density..), color='black', fill='white', bins=10) + 
-  ylim(c(0,1.5)) + 
-  geom_hline(yintercept = 1, lty=2) +
-  xlab('PIT') + #ggtitle("PIT histograms") +
-  facet_wrap(~exp) +
-  theme_bw()
-ggsave(file.path(outpath, paste0("plot_PIT_overall_", fig_suffix,".pdf")), device = cairo_pdf)
+plots = list()
+for (i in seq_along(exp_levels)){
+  iexp = exp_levels[i]
+  if (iexp %in%c('EMOS-loc', 'EMOS-glb', 'NGB')){
+    stat_name_x = "PIT"
+    rescale_dens = 1
+    mybreaks <- seq(0, 1, 1/17)
+  }else{
+    stat_name_x = "VR"
+    rescale_dens = 50
+    mybreaks <- seq(0.5, 51.5, 3)
+  }
+  if (iexp %in%c('QRF', 'RAW')){
+    stat_name_y = "density"
+  }else{
+    stat_name_y = NULL
+  }
+  plots[[i]] <- allscores %>% 
+    filter(exp == iexp) %>% 
+    ggplot(aes(pit)) +
+    geom_histogram(aes(y=..density..), color='white', fill='grey', bins=length(mybreaks)) + 
+    ylim(c(0, 5/rescale_dens)) + 
+    geom_hline(yintercept = 1/rescale_dens, lty=2) +
+    xlab(stat_name_x) +
+    ylab(stat_name_y) +
+    theme_bw() +
+    facet_wrap(~exp) +
+    theme(legend.position="bottom")
+}
+ggsave(filename = file.path(outpath, paste0("plot_PIT_overall_", fig_suffix,".pdf")), 
+       plot = gridExtra::marrangeGrob(plots, nrow=2, ncol=3, top=NULL, layout_matrix = rbind(c(1,2,3),c(4,5,6))),
+       device = cairo_pdf, width = 15, height = 12)
+ggsave(filename = file.path(outpath, paste0("plot_PIT_overall_", fig_suffix,".png")), 
+       plot = gridExtra::marrangeGrob(plots, nrow=2, ncol=3, top=NULL, layout_matrix = rbind(c(1,2,3),c(4,5,6))),
+       device = "png", width = 15, height = 12, dpi = 600)
+
+# PIT for selected experiments
+plots[[4]] <- plots[[4]] + ylab(NULL) 
+ggsave(filename = file.path(outpath, paste0("plot_PIT_overall_selexp_", fig_suffix,".pdf")), 
+       plot = gridExtra::marrangeGrob(plots[c(1,2,4,6)], nrow=1, ncol=4, top=NULL),
+       device = cairo_pdf, width = 15, height = 5)
+ggsave(filename = file.path(outpath, paste0("plot_PIT_overall_selexp_", fig_suffix,".png")), 
+       plot = gridExtra::marrangeGrob(plots[c(1,2,4,6)], nrow=1, ncol=4, top=NULL),
+       device = "png", width = 15, height = 5, dpi = 600)
 
 # CRPS scores
 allscores %>% 
-  group_by(exp) %>% 
+  #group_by(exp) %>% 
+  group_by(exp, station) %>% 
   summarise(
     mCRPS = mean(crps)
   ) %>% 
-  ggplot(aes(x=factor(exp), y=mCRPS, fill=factor(exp))) +
-  geom_col(color='black', fill='grey') + 
+  ggplot(aes(x=factor(exp), y=mCRPS)) +
+  geom_boxplot(notch = TRUE) + 
+  #stat_summary(fun=mean, geom="point", shape=4, size=2) +
+  scale_y_continuous(trans = 'log10') +
   #geom_col(color='black') + # use to colorize columns
-  geom_text(aes(label = round(mCRPS, 2), y=0), vjust = -0.5, size=4) +
+  #geom_text(aes(label = round(mCRPS, 2), y=0), vjust = -0.5, size=4) +
   xlab('Model') + ylab('Mean CRPS') +
   theme_bw()
-ggsave(file.path(outpath, paste0("plot_CRPS_overall_", fig_suffix,".pdf")), device = cairo_pdf)
+ggsave(file.path(outpath, paste0("plot_mCRPS_stat_", fig_suffix,".pdf")), device = cairo_pdf)
+ggsave(file.path(outpath, paste0("plot_mCRPS_stat_", fig_suffix,".png")), device = "png", dpi = 600)
 
 # Absolute Error
 allscores %>% 
@@ -186,6 +216,7 @@ ggmap(map) +
   theme(legend.position="right") +
   facet_wrap(~exp)
 ggsave(file.path(outpath, paste0("plot_CRPS_domain_", fig_suffix,".pdf")), device = cairo_pdf)
+ggsave(file.path(outpath, paste0("plot_CRPS_domain_", fig_suffix,".png")), device = "png", dpi = 600)
 
 # Relative crps scores wrt RAW forecast: 1-(exp/RAW) where 0=RAWquality, 1=100%improvement)
 if (is_reference_exp){
@@ -205,4 +236,5 @@ if (is_reference_exp){
     theme(legend.position="right") +
     facet_wrap(~exp)
   ggsave(file.path(outpath, paste0("plot_CRPSS_domain_", fig_suffix,".pdf")), device = cairo_pdf)
+  ggsave(file.path(outpath, paste0("plot_CRPSS_domain_", fig_suffix,".png")), device = "png", dpi = 600)
 }
