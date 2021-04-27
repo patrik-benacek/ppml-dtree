@@ -121,7 +121,7 @@ for (i in seq_along(exp_levels)){
     mybreaks <- seq(0, 1, 1/17)
   }else{
     stat_name_x = "VR"
-    rescale_dens = 50
+    rescale_dens = 51
     mybreaks <- seq(0.5, 51.5, 3)
   }
   if (iexp %in%c('QRF', 'RAW')){
